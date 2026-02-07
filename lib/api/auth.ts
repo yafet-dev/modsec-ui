@@ -65,6 +65,18 @@ export interface User {
   updatedAt: string;
 }
 
+export interface RefreshTokenRequest {
+  refresh_token: string;
+}
+
+export interface RefreshTokenResponse {
+  session: {
+    access_token: string;
+    refresh_token: string;
+    expires_at: number;
+  };
+}
+
 // Auth API functions
 export const authApi = {
   login: async (data: LoginRequest): Promise<LoginResponse> => {
@@ -78,6 +90,16 @@ export const authApi = {
 
   getMe: async (): Promise<User> => {
     const response = await apiClient.get<User>("/auth/me");
+    return response.data;
+  },
+
+  refreshToken: async (
+    data: RefreshTokenRequest
+  ): Promise<RefreshTokenResponse> => {
+    const response = await apiClient.post<RefreshTokenResponse>(
+      "/auth/refresh",
+      data
+    );
     return response.data;
   },
 

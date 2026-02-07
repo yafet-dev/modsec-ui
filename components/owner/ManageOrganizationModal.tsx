@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { type Organization } from "@/data/organizations";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { DomainWAFSection } from "./DomainWAFSection";
 
 interface ManageOrganizationModalProps {
   isOpen: boolean;
@@ -235,6 +236,14 @@ export function ManageOrganizationModal({
                   </p>
                 )}
               </div>
+            </div>
+
+            {/* WAF Protection Section */}
+            <div>
+              <DomainWAFSection
+                organizationId={organization.id}
+                domains={domains}
+              />
             </div>
 
             {/* Status Toggle */}

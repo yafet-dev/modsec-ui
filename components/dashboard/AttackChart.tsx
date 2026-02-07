@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useTheme } from "@/components/providers/ThemeProvider";
+import { ChartSkeleton } from "@/components/ui/Skeleton";
 import {
   LineChart,
   Line,
@@ -14,6 +15,8 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { TimeFilter, type TimeRange } from "./TimeFilter";
+import { useLogs } from "@/lib/api/hooks/useLogs";
+import { LogEntry } from "@/data/logs";
 
 interface DataPoint {
   time: string;
@@ -26,76 +29,140 @@ interface AttackChartProps {
   hostId?: string;
 }
 
-// Different base multipliers for each host to create unique patterns
-// Scaled down for small site: ~10k requests over 30 months = ~11 requests/day
-const hostPatterns: Record<
-  string,
-  { attackBase: number; blockRate: number; variance: number }
-> = {
-  all: { attackBase: 1.2, blockRate: 0.25, variance: 0.8 }, // ~1-2 requests/hour
-  api: { attackBase: 0.4, blockRate: 0.4, variance: 0.3 }, // ~0.3-0.7 requests/hour
-  www: { attackBase: 0.6, blockRate: 0.15, variance: 0.4 }, // ~0.4-1 requests/hour
-  admin: { attackBase: 0.15, blockRate: 0.3, variance: 0.1 }, // ~0.1-0.25 requests/hour
-  files: { attackBase: 0.1, blockRate: 0.15, variance: 0.08 }, // ~0.05-0.18 requests/hour
-  cdn: { attackBase: 0.04, blockRate: 0.1, variance: 0.03 }, // ~0.02-0.07 requests/hour
-};
-
-function generateData(range: TimeRange, hostId: string): DataPoint[] {
+// Calculate start date based on time range
+function getStartDate(range: TimeRange): Date {
   const now = new Date();
-  const data: DataPoint[] = [];
-  let points = 24;
-  let interval = 1; // hours
+  const start = new Date(now);
 
-  const pattern = hostPatterns[hostId] || hostPatterns.all;
-  // Create a seed based on hostId for consistent but different random patterns
-  const seed = hostId
-    .split("")
-    .reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  switch (range) {
+    case "24h":
+      start.setHours(now.getHours() - 24);
+      break;
+    case "7d":
+      start.setDate(now.getDate() - 7);
+      break;
+    case "30d":
+      start.setDate(now.getDate() - 30);
+      break;
+    case "3m":
+      start.setMonth(now.getMonth() - 3);
+      break;
+  }
+
+  return start;
+}
+
+// Group logs by time intervals based on range
+function groupLogsByTimeRange(
+  logs: LogEntry[],
+  range: TimeRange,
+  hostId: string
+): DataPoint[] {
+  const startDate = getStartDate(range);
+  
+  // Filter logs by time range and host
+  const filteredLogs = logs.filter((log) => {
+    const logDate = new Date(log.timestamp || log.createdAt);
+    if (logDate < startDate) return false;
+    if (hostId !== "all" && log.host !== hostId) return false;
+    return true;
+  });
+
+  const now = new Date();
+  let points = 24;
+  let intervalMs = 60 * 60 * 1000; // 1 hour in milliseconds
 
   switch (range) {
     case "24h":
       points = 24;
-      interval = 1;
+      intervalMs = 60 * 60 * 1000; // 1 hour
       break;
     case "7d":
       points = 7;
-      interval = 24;
+      intervalMs = 24 * 60 * 60 * 1000; // 1 day
       break;
     case "30d":
       points = 30;
-      interval = 24;
+      intervalMs = 24 * 60 * 60 * 1000; // 1 day
       break;
     case "3m":
       points = 12;
-      interval = 24 * 7;
+      intervalMs = 7 * 24 * 60 * 60 * 1000; // 1 week
       break;
   }
 
+  // Create time buckets
+  const buckets: Map<number, { attacks: number; blocked: number; allowed: number }> = new Map();
+  
+  // Initialize all buckets with zeros
   for (let i = points - 1; i >= 0; i--) {
-    const date = new Date(now.getTime() - i * interval * 60 * 60 * 1000);
+    const bucketTime = new Date(now.getTime() - i * intervalMs);
+    // Round down to the start of the interval
+    const bucketKey = range === "24h"
+      ? new Date(bucketTime.getFullYear(), bucketTime.getMonth(), bucketTime.getDate(), bucketTime.getHours()).getTime()
+      : range === "7d" || range === "30d"
+      ? new Date(bucketTime.getFullYear(), bucketTime.getMonth(), bucketTime.getDate()).getTime()
+      : new Date(bucketTime.getFullYear(), bucketTime.getMonth(), bucketTime.getDate() - bucketTime.getDay()).getTime(); // Start of week
+    
+    buckets.set(bucketKey, { attacks: 0, blocked: 0, allowed: 0 });
+  }
+
+  // Group logs into buckets
+  filteredLogs.forEach((log) => {
+    const logDate = new Date(log.timestamp || log.createdAt);
+    let bucketKey: number;
+    
+    if (range === "24h") {
+      bucketKey = new Date(logDate.getFullYear(), logDate.getMonth(), logDate.getDate(), logDate.getHours()).getTime();
+    } else if (range === "7d" || range === "30d") {
+      bucketKey = new Date(logDate.getFullYear(), logDate.getMonth(), logDate.getDate()).getTime();
+    } else {
+      // 3m - group by week
+      bucketKey = new Date(logDate.getFullYear(), logDate.getMonth(), logDate.getDate() - logDate.getDay()).getTime();
+    }
+
+    const bucket = buckets.get(bucketKey);
+    if (bucket) {
+      bucket.attacks++;
+      if (log.action === "blocked") {
+        bucket.blocked++;
+      } else {
+        bucket.allowed++;
+      }
+    }
+  });
+
+  // Convert buckets to data points with proper labels
+  const data: DataPoint[] = [];
+  for (let i = points - 1; i >= 0; i--) {
+    const bucketTime = new Date(now.getTime() - i * intervalMs);
+    let bucketKey: number;
+    
+    if (range === "24h") {
+      bucketKey = new Date(bucketTime.getFullYear(), bucketTime.getMonth(), bucketTime.getDate(), bucketTime.getHours()).getTime();
+    } else if (range === "7d" || range === "30d") {
+      bucketKey = new Date(bucketTime.getFullYear(), bucketTime.getMonth(), bucketTime.getDate()).getTime();
+    } else {
+      bucketKey = new Date(bucketTime.getFullYear(), bucketTime.getMonth(), bucketTime.getDate() - bucketTime.getDay()).getTime();
+    }
+
+    const bucket = buckets.get(bucketKey) || { attacks: 0, blocked: 0, allowed: 0 };
+    
     const timeLabel =
       range === "24h"
-        ? date.toLocaleTimeString("en-US", {
+        ? bucketTime.toLocaleTimeString("en-US", {
             hour: "2-digit",
             minute: "2-digit",
           })
         : range === "7d" || range === "30d"
-        ? date.toLocaleDateString("en-US", { month: "short", day: "numeric" })
-        : date.toLocaleDateString("en-US", { month: "short" });
-
-    // Generate pseudo-random but consistent values based on index and seed
-    const pseudoRandom = Math.sin(seed + i * 0.5) * 0.5 + 0.5;
-    // Scale up to get whole numbers (multiply by 10, then round)
-    const attacksScaled = (pattern.attackBase + pseudoRandom * pattern.variance) * 10;
-    const attacks = Math.max(1, Math.round(attacksScaled)); // Ensure at least 1
-    const blocked = Math.max(0, Math.round(attacks * pattern.blockRate)); // Round to whole number
-    const allowed = attacks - blocked;
+        ? bucketTime.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+        : bucketTime.toLocaleDateString("en-US", { month: "short" });
 
     data.push({
       time: timeLabel,
-      attacks,
-      blocked,
-      allowed,
+      attacks: bucket.attacks,
+      blocked: bucket.blocked,
+      allowed: bucket.allowed,
     });
   }
 
@@ -105,10 +172,40 @@ function generateData(range: TimeRange, hostId: string): DataPoint[] {
 export function AttackChart({ hostId = "all" }: AttackChartProps) {
   const [timeRange, setTimeRange] = useState<TimeRange>("24h");
   const { theme } = useTheme();
-  const data = useMemo(
-    () => generateData(timeRange, hostId),
-    [timeRange, hostId]
-  );
+  
+  // Determine limit based on time range
+  const limit = useMemo(() => {
+    switch (timeRange) {
+      case "24h":
+        return 5000; // Get more logs for 24h
+      case "7d":
+        return 10000;
+      case "30d":
+        return 50000;
+      case "3m":
+        return 100000;
+      default:
+        return 10000;
+    }
+  }, [timeRange]);
+
+  // Fetch logs from API
+  const { data: logsResponse, isLoading } = useLogs({
+    page: 1,
+    limit,
+    host: hostId !== "all" ? hostId : undefined,
+  });
+
+  const logs = logsResponse?.logs || [];
+
+  // Group logs by time range
+  const data = useMemo(() => {
+    return groupLogsByTimeRange(logs, timeRange, hostId);
+  }, [logs, timeRange, hostId]);
+
+  if (isLoading) {
+    return <ChartSkeleton />;
+  }
 
   return (
     <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-6">

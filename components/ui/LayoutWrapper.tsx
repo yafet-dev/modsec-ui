@@ -6,6 +6,7 @@ import { OwnerSidebar } from "./OwnerSidebar";
 import { ThemeToggle } from "./ThemeToggle";
 import { Button } from "./Button";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { useSidebar } from "@/components/providers/SidebarProvider";
 
 interface LayoutWrapperProps {
   children: React.ReactNode;
@@ -14,14 +15,22 @@ interface LayoutWrapperProps {
 export function LayoutWrapper({ children }: LayoutWrapperProps) {
   const { currentRole } = useRole();
   const { user, logout } = useAuth();
+  const { isCollapsed } = useSidebar();
 
   const isSuperAdmin = currentRole === "super_admin";
+
+  // OwnerSidebar is always w-64, regular Sidebar is dynamic
+  const sidebarWidth = isSuperAdmin 
+    ? "ml-64" 
+    : isCollapsed 
+      ? "ml-20" 
+      : "ml-72";
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-black flex">
       {isSuperAdmin ? <OwnerSidebar /> : <Sidebar />}
 
-      <div className="flex-1 ml-64">
+      <div className={`flex-1 transition-all duration-500 ease-out ${sidebarWidth}`}>
         <nav className="border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-black/80 backdrop-blur-md sticky top-0 z-50">
           <div className="px-6">
             <div className="flex items-center justify-between h-16">

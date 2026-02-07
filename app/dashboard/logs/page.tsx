@@ -11,8 +11,9 @@ import { HostSelector } from "@/components/ui/HostSelector";
 import { LogsTable } from "@/components/logs/LogsTable";
 import { LogsFilters } from "@/components/logs/LogsFilters";
 import { LogDetailPanel } from "@/components/logs/LogDetailPanel";
-import { logsData, getLogStats, type LogEntry } from "@/data/logs";
-import { hostsData } from "@/data/hosts";
+import { getLogStats, type LogEntry } from "@/data/logs";
+import { useLogs } from "@/lib/api/hooks/useLogs";
+import { useMyOrganizations } from "@/lib/api/hooks/useOrganization";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -20,6 +21,7 @@ export default function LogsPage() {
   const { isAuthenticated } = useAuth();
   const { currentRole } = useRole();
   const router = useRouter();
+  const { data: myOrganizations } = useMyOrganizations();
 
   // Filter states
   const [selectedHost, setSelectedHost] = useState("all");
@@ -37,52 +39,62 @@ export default function LogsPage() {
     }
   }, [isAuthenticated, currentRole, router]);
 
-  // Get host domain for filtering
-  const hostDomain = useMemo(() => {
-    const host = hostsData.find((h) => h.id === selectedHost);
-    return host?.domain || "all";
-  }, [selectedHost]);
+  // Extract unique hosts from organizations and current logs
+  const uniqueHosts = useMemo(() => {
+    const hostsSet = new Set<string>();
+    
+    // Add domains from user's organizations
+    if (myOrganizations) {
+      myOrganizations.forEach((org) => {
+        org.domains.forEach((domain) => {
+          hostsSet.add(domain);
+        });
+      });
+    }
+    
+    return Array.from(hostsSet).sort();
+  }, [myOrganizations]);
 
-  // Filter logs
-  const filteredLogs = useMemo(() => {
-    return logsData.filter((log) => {
-      // Host filter
-      const matchesHost = hostDomain === "all" || log.host === hostDomain;
+  // Build API params
+  const apiParams = useMemo(() => {
+    const params: any = {
+      page: currentPage,
+      limit: ITEMS_PER_PAGE,
+    };
 
-      // Search filter
-      const matchesSearch =
-        searchQuery === "" ||
-        log.requestUri.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        log.clientIp.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        log.ruleId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        log.ruleName.toLowerCase().includes(searchQuery.toLowerCase());
+    if (selectedHost !== "all") {
+      params.host = selectedHost;
+    }
 
-      // Severity filter
-      const matchesSeverity =
-        severityFilter === "all" || log.severity === severityFilter;
+    if (severityFilter !== "all") {
+      params.severity = severityFilter.toUpperCase();
+    }
 
-      // Action filter
-      const matchesAction =
-        actionFilter === "all" || log.action === actionFilter;
+    if (actionFilter !== "all") {
+      params.action = actionFilter;
+    }
 
-      return matchesHost && matchesSearch && matchesSeverity && matchesAction;
-    });
-  }, [hostDomain, searchQuery, severityFilter, actionFilter]);
+    if (searchQuery) {
+      params.search = searchQuery;
+    }
 
-  // Pagination
-  const totalPages = Math.ceil(filteredLogs.length / ITEMS_PER_PAGE);
-  const paginatedLogs = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredLogs.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [filteredLogs, currentPage]);
+    return params;
+  }, [currentPage, selectedHost, severityFilter, actionFilter, searchQuery]);
+
+  // Fetch logs from API (automatically filtered by user's organizations)
+  const { data: logsResponse, isLoading, error } = useLogs(apiParams);
+
+  const logs = logsResponse?.logs || [];
+  const totalLogs = logsResponse?.total || 0;
+  const totalPages = Math.ceil(totalLogs / ITEMS_PER_PAGE);
 
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [selectedHost, searchQuery, severityFilter, actionFilter]);
 
-  // Stats based on filtered logs
-  const stats = useMemo(() => getLogStats(filteredLogs), [filteredLogs]);
+  // Stats based on current page logs (could be enhanced to get all stats from API)
+  const stats = useMemo(() => getLogStats(logs), [logs]);
 
   if (!isAuthenticated || currentRole === "super_admin") {
     return null;
@@ -104,6 +116,7 @@ export default function LogsPage() {
             <HostSelector
               selectedHost={selectedHost}
               onHostChange={setSelectedHost}
+              hosts={uniqueHosts}
             />
           </div>
 
@@ -146,19 +159,31 @@ export default function LogsPage() {
           />
 
           {/* Logs Table */}
-          <LogsTable logs={paginatedLogs} onSelectLog={setSelectedLog} />
+          {isLoading ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500 dark:text-gray-400">Loading logs...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center py-12">
+              <p className="text-red-500">Error loading logs. Please try again.</p>
+            </div>
+          ) : (
+            <>
+              <LogsTable logs={logs} onSelectLog={setSelectedLog} />
 
-          {/* Pagination */}
-          <div className="mt-6 flex items-center justify-between">
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Showing {paginatedLogs.length} of {filteredLogs.length} logs
-            </p>
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-            />
-          </div>
+              {/* Pagination */}
+              <div className="mt-6 flex items-center justify-between">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Showing {logs.length} of {totalLogs} logs
+                </p>
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                />
+              </div>
+            </>
+          )}
         </Section>
       </main>
 

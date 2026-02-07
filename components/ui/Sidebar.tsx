@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "@/components/providers/ThemeProvider";
+import { useSidebar } from "@/components/providers/SidebarProvider";
 
 interface NavItem {
   name: string;
@@ -116,36 +117,174 @@ const navItems: NavItem[] = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  useTheme(); // Subscribe to theme changes for re-render
+  const { theme } = useTheme(); // Subscribe to theme changes for re-render
+  const { isCollapsed, setIsCollapsed } = useSidebar();
+  const isDark = theme === "dark";
+
+  const activeClasses = isDark
+    ? "bg-gradient-to-r from-white/95 to-white/85 text-slate-900 shadow-[0_8px_32px_rgba(0,0,0,0.3)]"
+    : "bg-gradient-to-r from-slate-900 to-slate-800 text-white shadow-[0_12px_40px_rgba(15,23,42,0.25)]";
+
+  const inactiveClasses = isDark
+    ? "text-zinc-300 hover:bg-white/[0.06] hover:text-white active:bg-white/[0.10]"
+    : "text-slate-600 hover:bg-white hover:text-slate-900 active:bg-slate-50";
 
   return (
-    <aside className="w-64 h-screen bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 fixed left-0 top-0 flex flex-col">
-      <div className="p-6 border-b border-gray-200 dark:border-gray-800">
-        <img src="/Logo-blue.png" alt="Zergaw WAF" className="h-8 w-auto" />
-      </div>
-
-      <nav className="flex-1 p-4 space-y-1">
-        {navItems.map((item) => {
-          const isActive = pathname === item.href;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`
-                flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200
-                ${
-                  isActive
-                    ? "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white font-medium"
-                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                }
-              `}
-            >
-              {item.icon}
-              <span>{item.name}</span>
+    <aside
+      className={`
+        flex flex-col h-screen
+        ${isCollapsed ? "w-20 px-3" : "w-72 px-6"}
+        backdrop-blur-xl
+        fixed inset-y-0 left-0 z-40
+        ${isDark ? "text-zinc-50" : "text-slate-900"}
+        ${
+          isDark
+            ? "bg-gradient-to-b from-[#050509]/98 via-[#050509]/95 to-[#050509]/98"
+            : "bg-gradient-to-b from-white/95 via-white/90 to-white/95"
+        }
+        transition-all duration-500 ease-out
+      `}
+    >
+      {/* ======= TOP SECTION ======= */}
+      <div className="flex-1 flex flex-col">
+        {/* Logo section */}
+        <div className="flex items-center justify-between pt-8 pb-4">
+          {!isCollapsed && (
+            <Link href="/dashboard" className="flex items-center justify-center w-full">
+              <img src="/Logo-blue.png" alt="Zergaw WAF" className="h-6 w-auto" />
             </Link>
-          );
-        })}
-      </nav>
+          )}
+          {isCollapsed && (
+            <Link href="/dashboard" className="flex items-center justify-center w-full">
+              <div
+                className={`
+                  w-9 h-9 rounded-[20px] flex items-center justify-center
+                  transition-all duration-500
+                  ${
+                    isDark
+                      ? "bg-white/95 text-slate-900 shadow-[0_4px_20px_rgba(255,255,255,0.1)]"
+                      : "bg-slate-900 text-white shadow-[0_4px_20px_rgba(15,23,42,0.2)]"
+                  }
+                `}
+              >
+                <span className="text-xs font-semibold tracking-tight">ZW</span>
+              </div>
+            </Link>
+          )}
+
+          {/* Collapse / reveal button */}
+          <button
+            type="button"
+            onClick={() => setIsCollapsed((prev) => !prev)}
+            className={`
+              ml-2 p-1.5 rounded-full transition-all duration-300
+              ${
+                isDark
+                  ? "hover:bg-white/10 active:bg-white/20 text-zinc-400 hover:text-white"
+                  : "hover:bg-slate-100 active:bg-slate-200 text-slate-500 hover:text-slate-700"
+              }
+            `}
+            aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {isCollapsed ? (
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            ) : (
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+            )}
+          </button>
+        </div>
+
+        {/* Navigation */}
+        <nav className={`flex flex-col space-y-2 mt-12`}>
+          {navItems.map((item) => {
+            const isActive = pathname === item.href;
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`
+                  group flex items-center relative
+                  ${isCollapsed ? "justify-center px-0" : "pl-4 pr-3 gap-3"}
+                  w-full rounded-2xl py-3 text-sm font-medium
+                  transition-all duration-300 ease-out
+                  ${isActive ? activeClasses : inactiveClasses}
+                  hover:scale-[1.02] active:scale-[0.98]
+                `}
+              >
+                {/* Active indicator on the RIGHT side */}
+                {isActive && !isCollapsed && (
+                  <div
+                    className={`absolute right-0 w-1 h-6 rounded-full mr-3 ${
+                      isDark
+                        ? "bg-gradient-to-b from-slate-900 to-slate-800"
+                        : "bg-gradient-to-b from-white to-slate-100"
+                    }`}
+                  />
+                )}
+
+                {/* Icon */}
+                <span
+                  className={`
+                    relative flex items-center justify-center
+                    transition-all duration-300
+                  `}
+                >
+                  {item.icon}
+                </span>
+
+                {!isCollapsed && (
+                  <span className="font-medium tracking-tight flex-1">
+                    {item.name}
+                  </span>
+                )}
+
+                {/* Tooltip for collapsed state */}
+                {isCollapsed && (
+                  <div
+                    className={`
+                      absolute left-full ml-3 px-2 py-1 rounded-lg text-xs font-medium
+                      opacity-0 group-hover:opacity-100 pointer-events-none
+                      transition-opacity duration-200
+                      ${
+                        isDark
+                          ? "bg-slate-900 text-white"
+                          : "bg-white text-slate-900 shadow-lg"
+                      }
+                    `}
+                  >
+                    {item.name}
+                  </div>
+                )}
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
     </aside>
   );
 }

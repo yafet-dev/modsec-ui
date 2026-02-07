@@ -52,3 +52,64 @@ body {
     "Segoe UI", Roboto, sans-serif;
   transition: background-color 0.2s ease, color 0.2s ease;
 }
+
+/* ========== Scrollbar Hide Utility ========== */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+/* ========== Apple-style scrollbar for dashboard content ========== */
+
+/* Base behavior for all custom scroll areas */
+.custom-scroll {
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-gutter: stable; /* keeps layout stable when scrollbar appears */
+}
+
+/* WebKit (Chrome, Edge, Safari) */
+.custom-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.custom-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Light theme thumb */
+.scroll-light::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.6); /* slate-400-ish */
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+/* Dark theme thumb */
+.scroll-dark::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.45); /* softer in dark mode */
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+/* Hover states (slightly stronger) */
+.scroll-light::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.85); /* slate-500-ish */
+}
+
+.scroll-dark::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.75);
+}
+
+/* Firefox colors */
+.scroll-light {
+  scrollbar-color: rgba(148, 163, 184, 0.7) transparent;
+}
+
+.scroll-dark {
+  scrollbar-color: rgba(148, 163, 184, 0.55) transparent;
+}

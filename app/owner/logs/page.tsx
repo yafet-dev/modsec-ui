@@ -11,8 +11,9 @@ import { OrganizationSelector } from "@/components/owner/OrganizationSelector";
 import { LogsTable } from "@/components/logs/LogsTable";
 import { LogsFilters } from "@/components/logs/LogsFilters";
 import { LogDetailPanel } from "@/components/logs/LogDetailPanel";
-import { logsData, getLogStats, type LogEntry } from "@/data/logs";
+import { getLogStats, type LogEntry } from "@/data/logs";
 import { useOrganizations } from "@/lib/api/hooks/useOrganization";
+import { useLogs } from "@/lib/api/hooks/useLogs";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -37,50 +38,44 @@ export default function OwnerLogsPage() {
     }
   }, [isAuthenticated, currentRole, router]);
 
-  // Filter logs by organization (for now, all logs are shown, but can be filtered by org domain)
-  const filteredLogs = useMemo(() => {
-    let logs = logsData;
+  // Build API params
+  const apiParams = useMemo(() => {
+    const params: any = {
+      page: currentPage,
+      limit: ITEMS_PER_PAGE,
+    };
 
-    // Filter by organization if selected
-    if (selectedOrg !== "all" && organizations) {
-      const org = organizations.find((o) => o.id === selectedOrg);
-      if (org) {
-        // Check if log host matches any of the organization's domains
-        logs = logs.filter((log) =>
-          org.domains.some((domain) => log.host.includes(domain.split(".")[0]))
-        );
-      }
+    if (selectedOrg !== "all") {
+      params.organizationId = selectedOrg;
     }
 
-    return logs.filter((log) => {
-      const matchesSearch =
-        searchQuery === "" ||
-        log.requestUri.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        log.clientIp.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        log.ruleId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        log.ruleName.toLowerCase().includes(searchQuery.toLowerCase());
+    if (severityFilter !== "all") {
+      params.severity = severityFilter.toUpperCase();
+    }
 
-      const matchesSeverity =
-        severityFilter === "all" || log.severity === severityFilter;
+    if (actionFilter !== "all") {
+      params.action = actionFilter;
+    }
 
-      const matchesAction =
-        actionFilter === "all" || log.action === actionFilter;
+    if (searchQuery) {
+      params.search = searchQuery;
+    }
 
-      return matchesSearch && matchesSeverity && matchesAction;
-    });
-  }, [selectedOrg, searchQuery, severityFilter, actionFilter]);
+    return params;
+  }, [currentPage, selectedOrg, severityFilter, actionFilter, searchQuery]);
 
-  const totalPages = Math.ceil(filteredLogs.length / ITEMS_PER_PAGE);
-  const paginatedLogs = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredLogs.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [filteredLogs, currentPage]);
+  // Fetch logs from API
+  const { data: logsResponse, isLoading, error } = useLogs(apiParams);
+
+  const logs = logsResponse?.logs || [];
+  const totalLogs = logsResponse?.total || 0;
+  const totalPages = Math.ceil(totalLogs / ITEMS_PER_PAGE);
 
   useEffect(() => {
     setCurrentPage(1);
   }, [selectedOrg, searchQuery, severityFilter, actionFilter]);
 
-  const stats = useMemo(() => getLogStats(filteredLogs), [filteredLogs]);
+  const stats = useMemo(() => getLogStats(logs), [logs]);
 
   if (!isAuthenticated || currentRole !== "super_admin") {
     return null;
@@ -144,18 +139,30 @@ export default function OwnerLogsPage() {
             onActionChange={setActionFilter}
           />
 
-          <LogsTable logs={paginatedLogs} onSelectLog={setSelectedLog} />
+          {isLoading ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500 dark:text-gray-400">Loading logs...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center py-12">
+              <p className="text-red-500">Error loading logs. Please try again.</p>
+            </div>
+          ) : (
+            <>
+              <LogsTable logs={logs} onSelectLog={setSelectedLog} />
 
-          <div className="mt-6 flex items-center justify-between">
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Showing {paginatedLogs.length} of {filteredLogs.length} logs
-            </p>
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-            />
-          </div>
+              <div className="mt-6 flex items-center justify-between">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Showing {logs.length} of {totalLogs} logs
+                </p>
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                />
+              </div>
+            </>
+          )}
         </Section>
       </main>
 

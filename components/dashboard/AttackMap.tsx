@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import {
   ComposableMap,
   Geographies,
@@ -9,7 +9,8 @@ import {
   ZoomableGroup,
 } from "react-simple-maps";
 import { useTheme } from "@/components/providers/ThemeProvider";
-import { getAttackOriginsByHost } from "@/data/dashboard";
+import { MapSkeleton } from "@/components/ui/Skeleton";
+import { useAttackOrigins } from "@/lib/api/hooks/useLogs";
 
 const GEO_URL =
   "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
@@ -72,12 +73,28 @@ export function AttackMap({
   simulateNewAttacks = true,
 }: AttackMapProps) {
   const { theme } = useTheme();
+  
+  // Fetch attack origins from API
+  const { data: attackOriginsResponse, isLoading, error } = useAttackOrigins({
+    host: hostId !== "all" && hostId !== "Overview" ? hostId : undefined,
+    limit: 50,
+  });
 
-  // Get initial attacks based on host
-  const initialAttacks = useMemo(() => {
-    const origins = getAttackOriginsByHost(hostId);
-    return origins.map((origin, idx) => ({
-      id: `${hostId}-${idx}`,
+  console.log('[AttackMap] Attack Origins Response:', attackOriginsResponse);
+  console.log('[AttackMap] Is Loading:', isLoading);
+  console.log('[AttackMap] Error:', error);
+
+  // Transform API response to AttackLocation format
+  const attacks = useMemo(() => {
+    console.log('[AttackMap] Processing attacks, response:', attackOriginsResponse);
+    if (!attackOriginsResponse?.origins) {
+      console.log('[AttackMap] No origins in response');
+      return [];
+    }
+    
+    console.log('[AttackMap] Origins array:', attackOriginsResponse.origins);
+    const transformed = attackOriginsResponse.origins.map((origin, idx) => ({
+      id: `${origin.ip}-${idx}`,
       country: origin.country,
       lat: origin.lat,
       lng: origin.lng,
@@ -85,19 +102,11 @@ export function AttackMap({
       severity: origin.severity,
       isActive: idx < 2, // First two are active
     }));
-  }, [hostId]);
+    console.log('[AttackMap] Transformed attacks:', transformed);
+    return transformed;
+  }, [attackOriginsResponse]);
 
-  const [attacks, setAttacks] = useState<AttackLocation[]>(initialAttacks);
   const [pulsingIds, setPulsingIds] = useState<Set<string>>(new Set());
-
-  // Reset attacks when host changes
-  useEffect(() => {
-    setAttacks(initialAttacks);
-    setPulsingIds(new Set());
-  }, [initialAttacks]);
-
-  // Don't simulate new attacks - keep numbers static
-  // Removed the simulation effect to keep numbers stuck
 
   const maxCount = useMemo(
     () => Math.max(...attacks.map((a) => a.count), 1),
@@ -120,6 +129,10 @@ export function AttackMap({
   const highCount = attacks.filter((a) => a.severity === "high").length;
   const mediumCount = attacks.filter((a) => a.severity === "medium").length;
   const lowCount = attacks.filter((a) => a.severity === "low").length;
+
+  if (isLoading) {
+    return <MapSkeleton />;
+  }
 
   return (
     <div>
