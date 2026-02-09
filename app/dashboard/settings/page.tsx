@@ -469,7 +469,7 @@ export default function SettingsPage() {
                 )}
               </>
             ) : activeTab === "ip-ban" ? (
-              <IPBanList domains={domains} />
+              <IPBanList domains={domains} organizationId={organization?.id || null} />
             ) : activeTab === "geo-location" ? (
               <GeoLocationAccess domains={domains} />
             ) : (

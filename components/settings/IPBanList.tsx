@@ -2,87 +2,23 @@
 
 import { useMemo, useState } from "react";
 import ReactCountryFlag from "react-country-flag";
-import toast from "react-hot-toast";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useConfirmation } from "@/components/providers/ConfirmationProvider";
-
-// Mock data for IP bans
-const mockIPBans = [
-  {
-    id: "1",
-    ip: "192.168.1.100",
-    country: "US",
-    countryName: "United States",
-    bannedAt: "2024-01-15T10:30:00Z",
-    reason: "Suspicious activity detected",
-    domain: "All",
-  },
-  {
-    id: "2",
-    ip: "203.0.113.45",
-    country: "CN",
-    countryName: "China",
-    bannedAt: "2024-01-14T15:20:00Z",
-    reason: "Multiple failed login attempts",
-    domain: "waf.zergaw.com",
-  },
-  {
-    id: "3",
-    ip: "198.51.100.23",
-    country: "RU",
-    countryName: "Russia",
-    bannedAt: "2024-01-13T09:15:00Z",
-    reason: "SQL injection attempt",
-    domain: "sales.zergaw.com",
-  },
-  {
-    id: "4",
-    ip: "203.0.113.78",
-    country: "GB",
-    countryName: "United Kingdom",
-    bannedAt: "2024-01-12T14:45:00Z",
-    reason: "XSS attack detected",
-    domain: "All",
-  },
-  {
-    id: "5",
-    ip: "198.51.100.156",
-    country: "DE",
-    countryName: "Germany",
-    bannedAt: "2024-01-11T11:30:00Z",
-    reason: "Brute force attack",
-    domain: "waf.zergaw.com",
-  },
-  {
-    id: "6",
-    ip: "192.0.2.89",
-    country: "FR",
-    countryName: "France",
-    bannedAt: "2024-01-10T16:20:00Z",
-    reason: "Malicious payload detected",
-    domain: "sales.zergaw.com",
-  },
-];
-
-interface IPBan {
-  id: string;
-  ip: string;
-  country: string;
-  countryName: string;
-  bannedAt: string;
-  reason: string;
-  domain: string;
-}
+import { useIPBans, useCreateIPBan, useDeleteIPBan } from "@/lib/api/hooks/useIPBan";
+import { IPBan } from "@/lib/api/ipBan";
 
 interface IPBanListProps {
   domains: string[];
+  organizationId: string | null;
 }
 
-export function IPBanList({ domains }: IPBanListProps) {
+export function IPBanList({ domains, organizationId }: IPBanListProps) {
   const { confirm } = useConfirmation();
+  const { data: ipBans = [], isLoading } = useIPBans(organizationId);
+  const createMutation = useCreateIPBan();
+  const deleteMutation = useDeleteIPBan();
 
-  const [ipBans, setIpBans] = useState<IPBan[]>(mockIPBans);
   const [showAddForm, setShowAddForm] = useState(false);
 
   const [newIP, setNewIP] = useState("");
@@ -99,30 +35,34 @@ export function IPBanList({ domains }: IPBanListProps) {
 
   const domainOptions = useMemo(() => ["All", ...domains], [domains]);
 
-  const handleAddIP = () => {
+  const handleAddIP = async () => {
     if (!newIP.trim()) return;
 
-    // Simple IP validation (same as your original)
+    // Simple IP validation
     const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
     if (!ipRegex.test(newIP)) {
-      toast.error("Please enter a valid IP address");
       return;
     }
 
-    const newBan: IPBan = {
-      id: Date.now().toString(),
-      ip: newIP,
-      country: newCountry || "XX",
-      countryName: newCountry || "Unknown",
-      bannedAt: new Date().toISOString(),
-      reason: newReason || "Manually added",
-      domain: newDomain,
-    };
+    if (!organizationId) {
+      return;
+    }
 
-    setIpBans([newBan, ...ipBans]);
+    const targetDomains = newDomain === "All" ? ["*"] : [newDomain];
+
+    createMutation.mutate({
+      organizationId,
+      data: {
+        ip: newIP,
+        domains: targetDomains,
+        country: newCountry || undefined,
+        countryName: newCountry ? undefined : undefined, // You might want to add country name lookup
+        reason: newReason || undefined,
+      },
+    });
+
     resetForm();
     setShowAddForm(false);
-    toast.success("IP ban added successfully");
   };
 
   const handleDeleteIP = async (id: string, ip: string) => {
@@ -134,9 +74,11 @@ export function IPBanList({ domains }: IPBanListProps) {
       variant: "danger",
     });
 
-    if (confirmed) {
-      setIpBans(ipBans.filter((ban) => ban.id !== id));
-      toast.success("IP ban removed successfully");
+    if (confirmed && organizationId) {
+      deleteMutation.mutate({
+        organizationId,
+        ipBanId: id,
+      });
     }
   };
 
@@ -279,9 +221,10 @@ export function IPBanList({ domains }: IPBanListProps) {
                 </button>
                 <button
                   onClick={handleAddIP}
-                  className="flex-1 rounded-full bg-[#0071e3] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:brightness-95 active:brightness-90"
+                  disabled={createMutation.isPending || !newIP.trim()}
+                  className="flex-1 rounded-full bg-[#0071e3] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:brightness-95 active:brightness-90 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Add Ban
+                  {createMutation.isPending ? "Adding..." : "Add Ban"}
                 </button>
               </div>
             </div>
@@ -291,7 +234,18 @@ export function IPBanList({ domains }: IPBanListProps) {
 
       {/* List card (Apple-like) */}
       <GlassCard className="overflow-hidden">
-        {ipBans.length === 0 ? (
+        {isLoading ? (
+          <div className="p-12 text-center">
+            <div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-full bg-black/5 dark:bg-white/10">
+              <svg className="h-6 w-6 animate-spin text-black/40 dark:text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-[#1d1d1f] dark:text-white">
+              Loading...
+            </h3>
+          </div>
+        ) : ipBans.length === 0 ? (
           <div className="p-12 text-center">
             <div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-full bg-black/5 dark:bg-white/10">
               <svg className="h-6 w-6 text-black/40 dark:text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -307,53 +261,61 @@ export function IPBanList({ domains }: IPBanListProps) {
           </div>
         ) : (
           <div className="divide-y divide-black/5 dark:divide-white/10">
-            {ipBans.map((ban) => (
-              <div
-                key={ban.id}
-                className="flex flex-col gap-3 px-6 py-5 transition hover:bg-black/[0.03] dark:hover:bg-white/[0.04] sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="min-w-0 flex-1">
-                  {/* Top line */}
-                  <div className="flex flex-wrap items-center gap-3">
-                    <span className="font-mono text-sm font-semibold text-[#1d1d1f] dark:text-white">
-                      {ban.ip}
-                    </span>
+            {ipBans.map((ban) => {
+              // Handle domains array - show "All" if contains "*" or all domains, otherwise show first domain
+              const displayDomain = ban.domains.includes("*") || ban.domains.length === domains.length
+                ? "All"
+                : ban.domains[0] || "Unknown";
 
-                    <DomainPill value={ban.domain} />
+              return (
+                <div
+                  key={ban.id}
+                  className="flex flex-col gap-3 px-6 py-5 transition hover:bg-black/[0.03] dark:hover:bg-white/[0.04] sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="min-w-0 flex-1">
+                    {/* Top line */}
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span className="font-mono text-sm font-semibold text-[#1d1d1f] dark:text-white">
+                        {ban.ip}
+                      </span>
 
-                    <CountryPill code={ban.country} name={ban.countryName} />
+                      <DomainPill value={displayDomain} />
+
+                      <CountryPill code={ban.country || "XX"} name={ban.countryName || "Unknown"} />
+                    </div>
+
+                    {/* Sub line */}
+                    <div className="mt-2 flex flex-col gap-1 text-xs text-black/60 dark:text-white/60">
+                      <p className="line-clamp-2">
+                        <span className="font-medium text-black/70 dark:text-white/70">
+                          Reason:
+                        </span>{" "}
+                        {ban.reason || "Manually added"}
+                      </p>
+                      <p>
+                        <span className="font-medium text-black/70 dark:text-white/70">
+                          Banned:
+                        </span>{" "}
+                        {formatDate(ban.bannedAt)}
+                      </p>
+                    </div>
                   </div>
 
-                  {/* Sub line */}
-                  <div className="mt-2 flex flex-col gap-1 text-xs text-black/60 dark:text-white/60">
-                    <p className="line-clamp-2">
-                      <span className="font-medium text-black/70 dark:text-white/70">
-                        Reason:
-                      </span>{" "}
-                      {ban.reason}
-                    </p>
-                    <p>
-                      <span className="font-medium text-black/70 dark:text-white/70">
-                        Banned:
-                      </span>{" "}
-                      {formatDate(ban.bannedAt)}
-                    </p>
+                  <div className="flex shrink-0 items-center justify-end gap-2">
+                    <button
+                      onClick={() => handleDeleteIP(ban.id, ban.ip)}
+                      disabled={deleteMutation.isPending}
+                      className="inline-flex items-center gap-2 rounded-full border border-red-500/20 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-600 transition hover:bg-red-500/15 disabled:opacity-50 disabled:cursor-not-allowed dark:border-red-400/20 dark:bg-red-400/10 dark:text-red-300"
+                    >
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      {deleteMutation.isPending ? "Removing..." : "Remove"}
+                    </button>
                   </div>
                 </div>
-
-                <div className="flex shrink-0 items-center justify-end gap-2">
-                  <button
-                    onClick={() => handleDeleteIP(ban.id, ban.ip)}
-                    className="inline-flex items-center gap-2 rounded-full border border-red-500/20 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-600 transition hover:bg-red-500/15 dark:border-red-400/20 dark:bg-red-400/10 dark:text-red-300"
-                  >
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                    Remove
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </GlassCard>
