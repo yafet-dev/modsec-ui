@@ -156,7 +156,7 @@ export function Sidebar() {
           {/* Collapse / reveal button */}
           <button
             type="button"
-            onClick={() => setIsCollapsed((prev) => !prev)}
+            onClick={() => setIsCollapsed(!isCollapsed)}
             className={`
               ml-2 p-1.5 rounded-full transition-all duration-300
               ${

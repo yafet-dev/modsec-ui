@@ -29,6 +29,8 @@ export default function OwnerUsersPage() {
     }
   }, [isAuthenticated, currentRole, router]);
 
+  type UserStatus = "active" | "pending" | "disabled";
+
   // Transform users data to match AllUsersTable format
   const transformedUsers = useMemo(() => {
     if (!users) return [];
@@ -43,28 +45,31 @@ export default function OwnerUsersPage() {
           name: user.fullName || user.email.split("@")[0],
           organizationId: "",
           role: user.role || "viewer",
-          status: user.disabled ? "disabled" : "active",
+          status: (user.disabled ? "disabled" : "active") as UserStatus,
           lastLogin: user.lastLogin,
           hosts: [] as string[],
         };
       }
 
       // Map each membership to a user entry
-      return user.memberships.map((membership) => ({
-        id: `${user.id}-${membership.id}`,
-        userId: user.id,
-        email: user.email,
-        name: user.fullName || user.email.split("@")[0],
-        organizationId: membership.organizationId,
-        role: membership.role,
-        status: user.disabled
+      return user.memberships.map((membership) => {
+        const status: UserStatus = user.disabled
           ? "disabled"
           : membership.status === "verified"
           ? "active"
-          : "pending",
-        lastLogin: user.lastLogin,
-        hosts: membership.organization.domains || [],
-      }));
+          : "pending";
+        return {
+          id: `${user.id}-${membership.id}`,
+          userId: user.id,
+          email: user.email,
+          name: user.fullName || user.email.split("@")[0],
+          organizationId: membership.organizationId,
+          role: membership.role,
+          status,
+          lastLogin: user.lastLogin,
+          hosts: membership.organization.domains || [],
+        };
+      });
     });
   }, [users]);
 

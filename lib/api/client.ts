@@ -1,13 +1,17 @@
-import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosError } from 'axios';
-import { authApi } from './auth';
+import axios, {
+  AxiosInstance,
+  InternalAxiosRequestConfig,
+  AxiosError,
+} from "axios";
+import { authApi } from "./auth";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 // Create axios instance
 export const apiClient: AxiosInstance = axios.create({
   baseURL: `${API_URL}/api`,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
@@ -18,7 +22,10 @@ let failedQueue: Array<{
   reject: (reason?: any) => void;
 }> = [];
 
-const processQueue = (error: AxiosError | null, token: string | null = null) => {
+const processQueue = (
+  error: AxiosError | null,
+  token: string | null = null,
+) => {
   failedQueue.forEach((prom) => {
     if (error) {
       prom.reject(error);
@@ -39,7 +46,7 @@ const isTokenExpired = (expiresAt: number): boolean => {
 
 // Helper function to refresh token
 const refreshToken = async (): Promise<string | null> => {
-  const authData = localStorage.getItem('modsecurity_auth');
+  const authData = localStorage.getItem("modsecurity_auth");
   if (!authData) return null;
 
   try {
@@ -49,7 +56,11 @@ const refreshToken = async (): Promise<string | null> => {
     if (!refresh_token) return null;
 
     const response = await authApi.refreshToken({ refresh_token });
-    const { access_token, refresh_token: newRefreshToken, expires_at } = response.session;
+    const {
+      access_token,
+      refresh_token: newRefreshToken,
+      expires_at,
+    } = response.session;
 
     // Update stored auth data
     const updatedAuthData = {
@@ -58,13 +69,13 @@ const refreshToken = async (): Promise<string | null> => {
       refresh_token: newRefreshToken,
       expires_at,
     };
-    localStorage.setItem('modsecurity_auth', JSON.stringify(updatedAuthData));
+    localStorage.setItem("modsecurity_auth", JSON.stringify(updatedAuthData));
 
     return access_token;
   } catch (error) {
-    console.error('Token refresh failed:', error);
+    console.error("Token refresh failed:", error);
     // Clear auth data on refresh failure
-    localStorage.removeItem('modsecurity_auth');
+    localStorage.removeItem("modsecurity_auth");
     return null;
   }
 };
@@ -73,11 +84,11 @@ const refreshToken = async (): Promise<string | null> => {
 apiClient.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     // Skip adding auth header for refresh token endpoint
-    if (config.url?.includes('/auth/refresh')) {
+    if (config.url?.includes("/auth/refresh")) {
       return config;
     }
 
-    const authData = localStorage.getItem('modsecurity_auth');
+    const authData = localStorage.getItem("modsecurity_auth");
     if (authData) {
       try {
         const parsed = JSON.parse(authData);
@@ -94,14 +105,16 @@ apiClient.interceptors.request.use(
             if (newToken) {
               access_token = newToken;
               // Update expires_at from the refreshed token
-              const updatedAuthData = JSON.parse(localStorage.getItem('modsecurity_auth') || '{}');
+              const updatedAuthData = JSON.parse(
+                localStorage.getItem("modsecurity_auth") || "{}",
+              );
               expires_at = updatedAuthData.expires_at;
             } else {
               // Refresh failed, redirect to login
-              if (typeof window !== 'undefined') {
-                window.location.href = '/';
+              if (typeof window !== "undefined") {
+                window.location.href = "/";
               }
-              return Promise.reject(new Error('Token refresh failed'));
+              return Promise.reject(new Error("Token refresh failed"));
             }
           } else {
             // Wait for ongoing refresh
@@ -109,7 +122,7 @@ apiClient.interceptors.request.use(
               failedQueue.push({ resolve, reject: () => {} });
             });
             // Get the updated token
-            const updatedAuthData = localStorage.getItem('modsecurity_auth');
+            const updatedAuthData = localStorage.getItem("modsecurity_auth");
             if (updatedAuthData) {
               const parsed = JSON.parse(updatedAuthData);
               access_token = parsed.access_token;
@@ -121,24 +134,26 @@ apiClient.interceptors.request.use(
           config.headers.Authorization = `Bearer ${access_token}`;
         }
       } catch (error) {
-        console.error('Error parsing auth data:', error);
+        console.error("Error parsing auth data:", error);
       }
     }
     return config;
   },
   (error) => {
     return Promise.reject(error);
-  }
+  },
 );
 
 // Response interceptor for error handling and token refresh on 401
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+    const originalRequest = error.config as InternalAxiosRequestConfig & {
+      _retry?: boolean;
+    };
 
     // Skip refresh logic for refresh endpoint itself
-    if (originalRequest.url?.includes('/auth/refresh')) {
+    if (originalRequest.url?.includes("/auth/refresh")) {
       return Promise.reject(error);
     }
 
@@ -178,26 +193,25 @@ apiClient.interceptors.response.use(
         } else {
           // Refresh failed, clear auth and redirect
           processQueue(error, null);
-          localStorage.removeItem('modsecurity_auth');
-          if (typeof window !== 'undefined') {
-            window.location.href = '/';
+          localStorage.removeItem("modsecurity_auth");
+          if (typeof window !== "undefined") {
+            window.location.href = "/";
           }
           return Promise.reject(error);
         }
       } catch (refreshError) {
         isRefreshing = false;
         processQueue(error, null);
-        localStorage.removeItem('modsecurity_auth');
-        if (typeof window !== 'undefined') {
-          window.location.href = '/';
+        localStorage.removeItem("modsecurity_auth");
+        if (typeof window !== "undefined") {
+          window.location.href = "/";
         }
         return Promise.reject(refreshError);
       }
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
 export default apiClient;
-

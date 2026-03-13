@@ -134,7 +134,7 @@ export function StatsGrid({ hostId = "all" }: StatsGridProps) {
         title: "Total Requests",
         value: formatValue(totalRequests),
         change: "Stable",
-        trend: "neutral" as const,
+        trend: "neutral" as Stat["trend"],
         icon: (
           <svg
             className="w-6 h-6"
@@ -155,7 +155,7 @@ export function StatsGrid({ hostId = "all" }: StatsGridProps) {
         title: "Blocked Attacks",
         value: formatValue(blockedAttacks),
         change: "Stable",
-        trend: "neutral" as const,
+        trend: "neutral" as Stat["trend"],
         icon: (
           <svg
             className="w-6 h-6"
@@ -176,7 +176,7 @@ export function StatsGrid({ hostId = "all" }: StatsGridProps) {
         title: "Threat Level",
         value: threatLevel,
         change: "Stable",
-        trend: "neutral" as const,
+        trend: "neutral" as Stat["trend"],
         icon: (
           <svg
             className="w-6 h-6"
@@ -197,7 +197,7 @@ export function StatsGrid({ hostId = "all" }: StatsGridProps) {
         title: "Active Rules",
         value: "45", // Keep fake for now as requested
         change: "Stable",
-        trend: "neutral" as const,
+        trend: "neutral" as Stat["trend"],
         icon: (
           <svg
             className="w-6 h-6"

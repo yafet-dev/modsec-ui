@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
@@ -9,9 +10,13 @@ import { Section } from "@/components/ui/Section";
 import { HostSelector } from "@/components/ui/HostSelector";
 import { StatsGrid } from "@/components/dashboard/StatsGrid";
 import { AttackChart } from "@/components/dashboard/AttackChart";
-import { AttackMap } from "@/components/dashboard/AttackMap";
 import { getHostById } from "@/data/hosts";
 import { getRecentActivityByHost } from "@/data/dashboard";
+
+const AttackMap = dynamic(
+  () => import("@/components/dashboard/AttackMap").then((m) => ({ default: m.AttackMap })),
+  { ssr: false, loading: () => <div className="w-full min-h-96 rounded-xl bg-gray-100 dark:bg-gray-800/50 animate-pulse" /> }
+);
 
 export default function Dashboard() {
   const { isAuthenticated } = useAuth();

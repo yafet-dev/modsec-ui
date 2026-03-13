@@ -176,35 +176,31 @@ export function GeoLocationAccess({ domains, organizationId }: GeoLocationAccess
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [displayCount, setDisplayCount] = useState<number>(40);
 
+  // Selected countries only (for the top section)
+  const selectedCountryEntries = useMemo(() => {
+    if (!ALL_COUNTRIES?.length || selectedCountries.length === 0) return [];
+    const codeToCountry = new Map(ALL_COUNTRIES.map((c) => [c.code, c]));
+    return selectedCountries
+      .map((code) => codeToCountry.get(code))
+      .filter((c): c is { code: string; name: string } => !!c)
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [selectedCountries]);
+
+  // Main list: only countries that are NOT selected (so selected live only in the top section)
   const filteredCountries = useMemo(() => {
-    // Ensure ALL_COUNTRIES is loaded
     if (!ALL_COUNTRIES || ALL_COUNTRIES.length === 0) {
       console.warn("ALL_COUNTRIES is empty or not loaded");
       return [];
     }
-    
-    let countries = ALL_COUNTRIES;
-    
-    // Filter by search query if provided
+    const selectedSet = new Set(selectedCountries);
+    let countries = ALL_COUNTRIES.filter((c) => !selectedSet.has(c.code));
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
       countries = countries.filter(
         (c) => c.name.toLowerCase().includes(query) || c.code.toLowerCase().includes(query)
       );
     }
-    
-    // Sort: selected countries first, then unselected
-    const selectedSet = new Set(selectedCountries);
-    return countries.sort((a, b) => {
-      const aSelected = selectedSet.has(a.code);
-      const bSelected = selectedSet.has(b.code);
-      
-      if (aSelected && !bSelected) return -1;
-      if (!aSelected && bSelected) return 1;
-      
-      // If both selected or both unselected, sort alphabetically
-      return a.name.localeCompare(b.name);
-    });
+    return countries.sort((a, b) => a.name.localeCompare(b.name));
   }, [searchQuery, selectedCountries]);
 
   const displayedCountries = filteredCountries.slice(0, displayCount);
@@ -289,17 +285,8 @@ export function GeoLocationAccess({ domains, organizationId }: GeoLocationAccess
 
   const handleSelectAll = () => {
     const filteredCodes = filteredCountries.map((c) => c.code);
-    const allFilteredSelected = filteredCodes.every((c) => selectedCountries.includes(c));
-
-    if (allFilteredSelected) {
-      setSelectedCountries(selectedCountries.filter((c) => !filteredCodes.includes(c)));
-    } else {
-      const next = [
-        ...selectedCountries.filter((c) => !filteredCodes.includes(c)),
-        ...filteredCodes,
-      ];
-      setSelectedCountries(next);
-    }
+    if (filteredCodes.length === 0) return;
+    setSelectedCountries((prev) => [...new Set([...prev, ...filteredCodes])]);
   };
 
 
@@ -512,19 +499,52 @@ export function GeoLocationAccess({ domains, organizationId }: GeoLocationAccess
         </div>
       </Section>
 
-      {/* Countries */}
+      {/* Selected countries (top section – only selected go here) */}
+      {showCountries && selectedCountryEntries.length > 0 && (
+        <Section
+          title={filterMode === "allow-only" ? "Selected allowed countries" : "Selected banned countries"}
+          description={
+            filterMode === "allow-only"
+              ? "Only these countries are allowed. Click to remove."
+              : "These countries are banned. Click to remove."
+          }
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            {selectedCountryEntries.map((country) => (
+              <Chip
+                key={country.code}
+                selected={true}
+                label={country.name}
+                left={
+                  <ReactCountryFlag
+                    countryCode={country.code}
+                    svg
+                    style={{ width: "22px", height: "22px", borderRadius: 6 }}
+                    title={country.name}
+                  />
+                }
+                onToggle={() => handleCountryToggle(country.code)}
+              />
+            ))}
+          </div>
+        </Section>
+      )}
+
+      {/* Add countries (main list – only non-selected; selecting moves them to the section above) */}
       {showCountries && (
         <Section
-          title={filterMode === "allow-only" ? "Allowed Countries" : "Banned Countries"}
-          description={getStatusText()}
+          title={filterMode === "allow-only" ? "Add allowed countries" : "Add banned countries"}
+          description={
+            filterMode === "allow-only"
+              ? "Search and select countries to allow. Selected countries appear above."
+              : "Search and select countries to ban. Selected countries appear above."
+          }
           right={
-            <Button onClick={handleSelectAll} variant="outline" size="sm">
-              {filteredCountries
-                .map((c) => c.code)
-                .every((code) => selectedCountries.includes(code))
-                ? "Deselect All"
-                : "Select All"}
-            </Button>
+            filteredCountries.length > 0 ? (
+              <Button onClick={handleSelectAll} variant="outline" size="sm">
+                Select All ({filteredCountries.length})
+              </Button>
+            ) : null
           }
         >
           <div className="space-y-4">
@@ -546,31 +566,32 @@ export function GeoLocationAccess({ domains, organizationId }: GeoLocationAccess
             {filteredCountries.length === 0 ? (
               <div className="rounded-2xl border border-black/5 dark:border-white/10 bg-white/60 dark:bg-white/5 backdrop-blur p-6">
                 <p className="text-[13px] text-zinc-600 dark:text-zinc-300">
-                  No countries found for "{searchQuery}".
+                  {selectedCountries.length > 0
+                    ? searchQuery.trim()
+                      ? `No more countries match "${searchQuery}".`
+                      : "All countries are already selected. Remove some above to add others here."
+                    : `No countries found for "${searchQuery}".`}
                 </p>
               </div>
             ) : (
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                  {displayedCountries.map((country) => {
-                    const selected = selectedCountries.includes(country.code);
-                    return (
-                      <Chip
-                        key={country.code}
-                        selected={selected}
-                        label={country.name}
-                        left={
-                          <ReactCountryFlag
-                            countryCode={country.code}
-                            svg
-                            style={{ width: "22px", height: "22px", borderRadius: 6 }}
-                            title={country.name}
-                          />
-                        }
-                        onToggle={() => handleCountryToggle(country.code)}
-                      />
-                    );
-                  })}
+                  {displayedCountries.map((country) => (
+                    <Chip
+                      key={country.code}
+                      selected={false}
+                      label={country.name}
+                      left={
+                        <ReactCountryFlag
+                          countryCode={country.code}
+                          svg
+                          style={{ width: "22px", height: "22px", borderRadius: 6 }}
+                          title={country.name}
+                        />
+                      }
+                      onToggle={() => handleCountryToggle(country.code)}
+                    />
+                  ))}
                 </div>
                 {hasMore && (
                   <div className="flex justify-center pt-4">

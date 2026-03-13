@@ -1,19 +1,24 @@
 "use client";
 
-import { hostsData, type Host } from "@/data/hosts";
+import { hostsData } from "@/data/hosts";
 
 interface HostSelectorProps {
   selectedHost: string;
   onHostChange: (hostId: string) => void;
+  /** When provided, options are "all" + these hosts (e.g. from org domains). Otherwise uses static hostsData. */
+  hosts?: string[];
   className?: string;
 }
 
 export function HostSelector({
   selectedHost,
   onHostChange,
+  hosts,
   className = "",
 }: HostSelectorProps) {
-  const currentHost = hostsData.find((h) => h.id === selectedHost) || hostsData[0];
+  const options = hosts != null
+    ? [{ value: "all", label: "All hosts" }, ...hosts.map((h) => ({ value: h, label: h }))]
+    : hostsData.map((h) => ({ value: h.id, label: h.domain }));
 
   return (
     <div className={`relative ${className}`}>
@@ -22,9 +27,9 @@ export function HostSelector({
         onChange={(e) => onHostChange(e.target.value)}
         className="appearance-none bg-transparent border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-2 pr-10 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition-colors"
       >
-        {hostsData.map((host) => (
-          <option key={host.id} value={host.id}>
-            {host.domain}
+        {options.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
           </option>
         ))}
       </select>

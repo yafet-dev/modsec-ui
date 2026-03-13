@@ -1,4 +1,4 @@
-declare module "react-simple-maps" {
+declare module "@vnedyalk0v/react19-simple-maps" {
   import { ReactNode, CSSProperties } from "react";
 
   export interface ComposableMapProps {

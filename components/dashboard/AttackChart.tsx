@@ -62,7 +62,7 @@ function groupLogsByTimeRange(
   
   // Filter logs by time range and host
   const filteredLogs = logs.filter((log) => {
-    const logDate = new Date(log.timestamp || log.createdAt);
+    const logDate = new Date(log.timestamp);
     if (logDate < startDate) return false;
     if (hostId !== "all" && log.host !== hostId) return false;
     return true;
@@ -109,7 +109,7 @@ function groupLogsByTimeRange(
 
   // Group logs into buckets
   filteredLogs.forEach((log) => {
-    const logDate = new Date(log.timestamp || log.createdAt);
+    const logDate = new Date(log.timestamp);
     let bucketKey: number;
     
     if (range === "24h") {

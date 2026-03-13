@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import "d3-transition"; // Extends d3-selection with .transition() required by d3-zoom in react19-simple-maps
+import { useState, useMemo, useEffect } from "react";
 import {
   ComposableMap,
   Geographies,
   Geography,
   Marker,
   ZoomableGroup,
-} from "react-simple-maps";
+} from "@vnedyalk0v/react19-simple-maps";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { MapSkeleton } from "@/components/ui/Skeleton";
 import { useAttackOrigins } from "@/lib/api/hooks/useLogs";
@@ -73,37 +74,46 @@ export function AttackMap({
   simulateNewAttacks = true,
 }: AttackMapProps) {
   const { theme } = useTheme();
-  
+  const [geoData, setGeoData] = useState<object | null>(null);
+  const [geoError, setGeoError] = useState<string | null>(null);
+
+  // Load world geography client-side so the map always has data (avoids library URL fetch issues)
+  useEffect(() => {
+    let cancelled = false;
+    fetch(GEO_URL)
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((data) => {
+        if (!cancelled) setGeoData(data);
+      })
+      .catch((err) => {
+        if (!cancelled) setGeoError(err?.message ?? "Failed to load map");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // Fetch attack origins from API
   const { data: attackOriginsResponse, isLoading, error } = useAttackOrigins({
     host: hostId !== "all" && hostId !== "Overview" ? hostId : undefined,
     limit: 50,
   });
 
-  console.log('[AttackMap] Attack Origins Response:', attackOriginsResponse);
-  console.log('[AttackMap] Is Loading:', isLoading);
-  console.log('[AttackMap] Error:', error);
-
   // Transform API response to AttackLocation format
   const attacks = useMemo(() => {
-    console.log('[AttackMap] Processing attacks, response:', attackOriginsResponse);
-    if (!attackOriginsResponse?.origins) {
-      console.log('[AttackMap] No origins in response');
-      return [];
-    }
-    
-    console.log('[AttackMap] Origins array:', attackOriginsResponse.origins);
-    const transformed = attackOriginsResponse.origins.map((origin, idx) => ({
+    if (!attackOriginsResponse?.origins) return [];
+    return attackOriginsResponse.origins.map((origin, idx) => ({
       id: `${origin.ip}-${idx}`,
       country: origin.country,
       lat: origin.lat,
       lng: origin.lng,
       count: origin.count,
       severity: origin.severity,
-      isActive: idx < 2, // First two are active
+      isActive: idx < 2,
     }));
-    console.log('[AttackMap] Transformed attacks:', transformed);
-    return transformed;
   }, [attackOriginsResponse]);
 
   const [pulsingIds, setPulsingIds] = useState<Set<string>>(new Set());
@@ -137,7 +147,30 @@ export function AttackMap({
     .filter((a) => a.severity === "low")
     .reduce((sum, a) => sum + a.count, 0);
 
+  // Show skeleton while attack data or geography is loading
   if (isLoading) {
+    return <MapSkeleton />;
+  }
+
+  // Show skeleton while geography is loading; show message if it failed
+  if (geoError) {
+    return (
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            Attack Origins
+          </h3>
+        </div>
+        <div className="relative w-full min-h-96 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800/50 flex items-center justify-center">
+          <p className="text-gray-500 dark:text-gray-400">
+            Map unavailable: {geoError}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!geoData) {
     return <MapSkeleton />;
   }
 
@@ -193,22 +226,24 @@ export function AttackMap({
         </div>
       </div>
 
-      {/* Map container - no background, larger height */}
-      <div className="relative w-full h-96 rounded-xl overflow-hidden">
+      {/* Map container - explicit size so SVG renders correctly */}
+      <div className="relative w-full min-h-96 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800/50">
         <ComposableMap
-          projection="geoMercator"
+          width={800}
+          height={400}
+          projection="geoEqualEarth"
           projectionConfig={{
-            scale: 140,
+            scale: 147,
             center: [0, 20],
           }}
-          style={{ width: "100%", height: "100%" }}
+          style={{ width: "100%", height: "auto", maxHeight: "24rem" }}
         >
           <ZoomableGroup>
-            <Geographies geography={GEO_URL}>
+            <Geographies geography={geoData}>
               {({ geographies }) =>
-                geographies.map((geo) => (
+                geographies.map((geo, idx) => (
                   <Geography
-                    key={geo.rsmKey}
+                    key={(geo as { rsmKey?: string }).rsmKey ?? `geo-${idx}`}
                     geography={geo}
                     fill={isDark ? "#1f2937" : "#e5e7eb"}
                     stroke={isDark ? "#374151" : "#d1d5db"}

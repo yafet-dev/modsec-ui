@@ -6,21 +6,24 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.12",
+    "@vnedyalk0v/react19-simple-maps": "^2.0.2",
+    "d3-transition": "^3.0.1",
     "axios": "^1.7.7",
     "country-list": "^2.4.1",
-    "next": "16.0.10",
+    "next": "^16.1.6",
     "react": "19.2.1",
     "react-country-flag": "^3.1.0",
     "react-dom": "19.2.1",
     "react-hot-toast": "^2.6.0",
-    "react-simple-maps": "^3.0.0",
     "recharts": "^3.5.1"
   },
   "devDependencies": {
+    "patch-package": "^8.0.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

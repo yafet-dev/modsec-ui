@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
@@ -8,9 +9,13 @@ import { LayoutWrapper } from "@/components/ui/LayoutWrapper";
 import { Section } from "@/components/ui/Section";
 import { StatsGrid } from "@/components/dashboard/StatsGrid";
 import { AttackChart } from "@/components/dashboard/AttackChart";
-import { AttackMap } from "@/components/dashboard/AttackMap";
 import { useLogs } from "@/lib/api/hooks/useLogs";
 import { RecentActivitySkeleton } from "@/components/ui/Skeleton";
+
+const AttackMap = dynamic(
+  () => import("@/components/dashboard/AttackMap").then((m) => ({ default: m.AttackMap })),
+  { ssr: false, loading: () => <div className="w-full min-h-96 rounded-xl bg-gray-100 dark:bg-gray-800/50 animate-pulse" /> }
+);
 
 export default function OwnerDashboard() {
   const { isAuthenticated } = useAuth();
