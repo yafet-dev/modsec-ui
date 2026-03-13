@@ -55,6 +55,9 @@ export default function RulesPage() {
       router.push("/");
     } else if (currentRole === "super_admin") {
       router.push("/owner/rules");
+    } else {
+      // Rules page is only available for super_admin, redirect regular admins to dashboard
+      router.push("/dashboard");
     }
   }, [isAuthenticated, currentRole, router]);
 

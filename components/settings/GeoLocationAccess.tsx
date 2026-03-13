@@ -1,60 +1,19 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import ReactCountryFlag from "react-country-flag";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useConfirmation } from "@/components/providers/ConfirmationProvider";
-
-// Mock data - List of countries with their codes
-const allCountries = [
-  { code: "ET", name: "Ethiopia" },
-  { code: "US", name: "United States" },
-  { code: "GB", name: "United Kingdom" },
-  { code: "CA", name: "Canada" },
-  { code: "AU", name: "Australia" },
-  { code: "DE", name: "Germany" },
-  { code: "FR", name: "France" },
-  { code: "IT", name: "Italy" },
-  { code: "ES", name: "Spain" },
-  { code: "NL", name: "Netherlands" },
-  { code: "BE", name: "Belgium" },
-  { code: "CH", name: "Switzerland" },
-  { code: "AT", name: "Austria" },
-  { code: "SE", name: "Sweden" },
-  { code: "NO", name: "Norway" },
-  { code: "DK", name: "Denmark" },
-  { code: "FI", name: "Finland" },
-  { code: "PL", name: "Poland" },
-  { code: "CZ", name: "Czech Republic" },
-  { code: "IE", name: "Ireland" },
-  { code: "PT", name: "Portugal" },
-  { code: "GR", name: "Greece" },
-  { code: "RO", name: "Romania" },
-  { code: "HU", name: "Hungary" },
-  { code: "BG", name: "Bulgaria" },
-  { code: "CN", name: "China" },
-  { code: "JP", name: "Japan" },
-  { code: "KR", name: "South Korea" },
-  { code: "IN", name: "India" },
-  { code: "BR", name: "Brazil" },
-  { code: "MX", name: "Mexico" },
-  { code: "AR", name: "Argentina" },
-  { code: "ZA", name: "South Africa" },
-  { code: "EG", name: "Egypt" },
-  { code: "NG", name: "Nigeria" },
-  { code: "KE", name: "Kenya" },
-  { code: "RU", name: "Russia" },
-  { code: "TR", name: "Turkey" },
-  { code: "SA", name: "Saudi Arabia" },
-  { code: "AE", name: "United Arab Emirates" },
-];
+import { ALL_COUNTRIES } from "@/lib/constants/countries";
+import { useGeoAccess, useSaveGeoAccess } from "@/lib/api/hooks/useGeoAccess";
 
 type FilterMode = "allow-all" | "allow-only" | "ban-specific";
 
 interface GeoLocationAccessProps {
   domains: string[];
+  organizationId: string | null;
 }
 
 function Section({
@@ -206,21 +165,121 @@ function Chip({
   );
 }
 
-export function GeoLocationAccess({ domains }: GeoLocationAccessProps) {
+export function GeoLocationAccess({ domains, organizationId }: GeoLocationAccessProps) {
   const { confirm } = useConfirmation();
+  const { data: geoAccessData, isLoading: isLoadingSettings } = useGeoAccess(organizationId);
+  const saveMutation = useSaveGeoAccess();
 
   const [filterMode, setFilterMode] = useState<FilterMode>("allow-all");
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
   const [selectedDomain, setSelectedDomain] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [displayCount, setDisplayCount] = useState<number>(40);
 
   const filteredCountries = useMemo(() => {
-    if (!searchQuery.trim()) return allCountries;
-    const query = searchQuery.toLowerCase();
-    return allCountries.filter(
-      (c) => c.name.toLowerCase().includes(query) || c.code.toLowerCase().includes(query)
-    );
+    // Ensure ALL_COUNTRIES is loaded
+    if (!ALL_COUNTRIES || ALL_COUNTRIES.length === 0) {
+      console.warn("ALL_COUNTRIES is empty or not loaded");
+      return [];
+    }
+    
+    let countries = ALL_COUNTRIES;
+    
+    // Filter by search query if provided
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      countries = countries.filter(
+        (c) => c.name.toLowerCase().includes(query) || c.code.toLowerCase().includes(query)
+      );
+    }
+    
+    // Sort: selected countries first, then unselected
+    const selectedSet = new Set(selectedCountries);
+    return countries.sort((a, b) => {
+      const aSelected = selectedSet.has(a.code);
+      const bSelected = selectedSet.has(b.code);
+      
+      if (aSelected && !bSelected) return -1;
+      if (!aSelected && bSelected) return 1;
+      
+      // If both selected or both unselected, sort alphabetically
+      return a.name.localeCompare(b.name);
+    });
+  }, [searchQuery, selectedCountries]);
+
+  const displayedCountries = filteredCountries.slice(0, displayCount);
+  const hasMore = filteredCountries.length > displayCount;
+
+  // Reset display count when search query changes
+  useEffect(() => {
+    setDisplayCount(40);
   }, [searchQuery]);
+
+  // Clear selected countries when switching to allow-all mode
+  useEffect(() => {
+    if (filterMode === "allow-all") {
+      setSelectedCountries([]);
+    }
+  }, [filterMode]);
+
+  // Load existing settings when domain changes or settings are loaded
+  useEffect(() => {
+    // Wait for data to be loaded
+    if (isLoadingSettings || !organizationId) {
+      return;
+    }
+
+    // If we have data, load settings
+    if (geoAccessData && geoAccessData.settings) {
+      const normalizedDomain = selectedDomain === "All" ? "*" : selectedDomain.toLowerCase().trim();
+      
+      console.log("🔍 Looking for settings:", {
+        selectedDomain,
+        normalizedDomain,
+        allSettings: geoAccessData.settings,
+        settingsCount: geoAccessData.settings.length
+      });
+
+      // Try exact match first
+      let existingSetting = geoAccessData.settings.find(
+        (s) => s.domain === normalizedDomain
+      );
+
+      // If not found, try case-insensitive match
+      if (!existingSetting) {
+        existingSetting = geoAccessData.settings.find(
+          (s) => s.domain.toLowerCase().trim() === normalizedDomain
+        );
+      }
+
+      if (existingSetting) {
+        console.log("✅ Loading existing settings:", {
+          domain: existingSetting.domain,
+          mode: existingSetting.mode,
+          allowed: existingSetting.allowedCountries,
+          denied: existingSetting.deniedCountries
+        });
+        setFilterMode(existingSetting.mode);
+        if (existingSetting.mode === "allow-only") {
+          setSelectedCountries([...existingSetting.allowedCountries]);
+        } else if (existingSetting.mode === "ban-specific") {
+          setSelectedCountries([...existingSetting.deniedCountries]);
+        } else {
+          setSelectedCountries([]);
+        }
+      } else {
+        // No existing settings for this domain
+        console.log("❌ No existing settings found for domain:", normalizedDomain, "Available domains:", geoAccessData.settings.map(s => s.domain));
+        setFilterMode("allow-all");
+        setSelectedCountries([]);
+      }
+    } else {
+      // No data yet - use defaults
+      console.log("⏳ No geo access data yet, using defaults");
+      setFilterMode("allow-all");
+      setSelectedCountries([]);
+    }
+  }, [selectedDomain, geoAccessData, organizationId, isLoadingSettings]);
 
   const handleCountryToggle = (code: string) => {
     setSelectedCountries((prev) =>
@@ -242,6 +301,7 @@ export function GeoLocationAccess({ domains }: GeoLocationAccessProps) {
       setSelectedCountries(next);
     }
   };
+
 
   const getStatusText = () => {
     if (filterMode === "allow-all") return "All countries are allowed";
@@ -287,16 +347,80 @@ export function GeoLocationAccess({ domains }: GeoLocationAccessProps) {
 
     if (!confirmed) return;
 
-    console.log("Saving geo-location settings:", {
-      filterMode,
-      selectedCountries,
-      selectedDomain,
-    });
+    if (!organizationId) {
+      toast.error("Organization ID is required");
+      return;
+    }
 
-    toast.success("Geo-location settings saved successfully!");
+    // Prepare data according to mode: ensure no intersections
+    let allowedCountries: string[] = [];
+    let deniedCountries: string[] = [];
+
+    if (filterMode === "allow-only") {
+      allowedCountries = selectedCountries;
+      deniedCountries = [];
+    } else if (filterMode === "ban-specific") {
+      allowedCountries = [];
+      deniedCountries = selectedCountries;
+    } else {
+      // allow-all: both empty
+      allowedCountries = [];
+      deniedCountries = [];
+    }
+
+    // Call API to save settings
+    saveMutation.mutate({
+      organizationId,
+      data: {
+        domain: selectedDomain,
+        mode: filterMode,
+        allowedCountries,
+        deniedCountries,
+      },
+    });
   };
 
   const showCountries = filterMode === "allow-only" || filterMode === "ban-specific";
+  const isSaving = saveMutation.isPending;
+
+  // Debug: Log current state
+  useEffect(() => {
+    if (geoAccessData) {
+      console.log("📊 Current Geo Access State:", {
+        filterMode,
+        selectedCountries,
+        selectedDomain,
+        geoAccessData: geoAccessData.settings
+      });
+    }
+  }, [filterMode, selectedCountries, selectedDomain, geoAccessData]);
+
+  // Show loading state
+  if (isLoadingSettings) {
+    return (
+      <div className="space-y-7">
+        <div className="rounded-3xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur-xl p-10 text-center">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-zinc-900/20 border-t-zinc-900 dark:border-white/20 dark:border-t-white" />
+          <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400">
+            Loading geo access settings...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error if no organization
+  if (!organizationId) {
+    return (
+      <div className="space-y-7">
+        <div className="rounded-3xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur-xl p-10 text-center">
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            No organization found. Please ensure you are a member of an organization.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-7">
@@ -369,13 +493,21 @@ export function GeoLocationAccess({ domains }: GeoLocationAccessProps) {
             checked={filterMode === "allow-only"}
             title="Allow Only Selected"
             subtitle="Block everyone except the countries you choose."
-            onSelect={() => setFilterMode("allow-only")}
+            onSelect={() => {
+              setFilterMode("allow-only");
+              setSelectedCountries([]);
+              setSearchQuery("");
+            }}
           />
           <RadioCard
             checked={filterMode === "ban-specific"}
             title="Ban Specific"
             subtitle="Allow everyone except the countries you ban."
-            onSelect={() => setFilterMode("ban-specific")}
+            onSelect={() => {
+              setFilterMode("ban-specific");
+              setSelectedCountries([]);
+              setSearchQuery("");
+            }}
           />
         </div>
       </Section>
@@ -414,31 +546,44 @@ export function GeoLocationAccess({ domains }: GeoLocationAccessProps) {
             {filteredCountries.length === 0 ? (
               <div className="rounded-2xl border border-black/5 dark:border-white/10 bg-white/60 dark:bg-white/5 backdrop-blur p-6">
                 <p className="text-[13px] text-zinc-600 dark:text-zinc-300">
-                  No countries found for “{searchQuery}”.
+                  No countries found for "{searchQuery}".
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                {filteredCountries.map((country) => {
-                  const selected = selectedCountries.includes(country.code);
-                  return (
-                    <Chip
-                      key={country.code}
-                      selected={selected}
-                      label={country.name}
-                      left={
-                        <ReactCountryFlag
-                          countryCode={country.code}
-                          svg
-                          style={{ width: "22px", height: "22px", borderRadius: 6 }}
-                          title={country.name}
-                        />
-                      }
-                      onToggle={() => handleCountryToggle(country.code)}
-                    />
-                  );
-                })}
-              </div>
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                  {displayedCountries.map((country) => {
+                    const selected = selectedCountries.includes(country.code);
+                    return (
+                      <Chip
+                        key={country.code}
+                        selected={selected}
+                        label={country.name}
+                        left={
+                          <ReactCountryFlag
+                            countryCode={country.code}
+                            svg
+                            style={{ width: "22px", height: "22px", borderRadius: 6 }}
+                            title={country.name}
+                          />
+                        }
+                        onToggle={() => handleCountryToggle(country.code)}
+                      />
+                    );
+                  })}
+                </div>
+                {hasMore && (
+                  <div className="flex justify-center pt-4">
+                    <Button
+                      onClick={() => setDisplayCount((prev) => Math.min(prev + 40, filteredCountries.length))}
+                      variant="outline"
+                      size="md"
+                    >
+                      Load More ({filteredCountries.length - displayCount} remaining)
+                    </Button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </Section>
@@ -505,8 +650,13 @@ export function GeoLocationAccess({ domains }: GeoLocationAccessProps) {
 
       {/* Save */}
       <div className="flex items-center justify-end gap-3">
-        <Button onClick={handleSave} variant="primary" size="md">
-          Save Settings
+        <Button 
+          onClick={handleSave} 
+          variant="primary" 
+          size="md"
+          disabled={isSaving}
+        >
+          {isSaving ? "Saving..." : "Save Settings"}
         </Button>
       </div>
 

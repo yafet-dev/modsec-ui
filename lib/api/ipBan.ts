@@ -1,4 +1,4 @@
-import { apiClient } from './client';
+import apiClient from './client';
 
 export interface IPBan {
   id: string;
@@ -16,9 +16,8 @@ export interface IPBan {
 export interface CreateIPBanRequest {
   ip: string;
   domains: string[]; // Array of domains or ["*"] for all domains
-  country?: string;
-  countryName?: string;
   reason?: string;
+  // Country is auto-detected by backend from IP
 }
 
 // IP Ban API functions

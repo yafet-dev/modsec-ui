@@ -1,0 +1,58 @@
+# Screenshots Directory
+
+This directory contains screenshots used in the documentation.
+
+## Required Screenshots
+
+The following screenshots are referenced in the documentation and should be added:
+
+### Overview Document
+1. `portal-overview.png` - Main portal interface
+2. `dashboard-overview.png` - Full dashboard view
+3. `logs-view.png` - Logs page with filtering options
+4. `attack-map.png` - Attack origins world map
+5. `attack-chart.png` - Attack timeline chart
+6. `user-management.png` - User management interface
+7. `waf-settings.png` - WAF enable/disable controls
+8. `ip-ban-list.png` - IP ban management interface
+9. `geo-access.png` - Geo-location access control settings
+10. `notifications.png` - Notification configuration interface
+
+### Dashboard Guide
+11. `host-selector.png` - Host selector dropdown
+12. `overview-stats.png` - Overview statistics cards
+13. `time-filter.png` - Time range filter buttons
+14. `recent-activity.png` - Recent Activity list
+
+### Logs Guide
+15. `logs-overview.png` - Full logs page view
+16. `logs-header.png` - Logs page header with host selector
+17. `logs-stats.png` - Statistics cards (Blocked Today, Allowed Today, Top Rule)
+18. `logs-filters.png` - Search bar and filter dropdowns
+19. `logs-table.png` - Logs table with columns and sample entries
+20. `logs-pagination.png` - Pagination controls
+21. `log-detail-panel.png` - Detailed log information panel
+
+### Users Guide
+22. `users-overview.png` - Users page showing team members table
+23. `admin-limit.png` - Admin limit indicator
+24. `add-user-modal.png` - Add user form
+
+### Settings Guide
+25. `settings-overview.png` - Settings page with tab navigation
+26. `waf-settings.png` - WAF protection toggles for each domain
+27. `summary-reports.png` - Summary reports configuration
+28. `ip-ban-list.png` - List of banned IP addresses
+29. `add-ip-ban.png` - Add IP ban modal
+30. `geo-access-modes.png` - Geo access mode selection
+31. `geo-access-config.png` - Country selection interface
+32. `telegram-connect.png` - Telegram connection process
+33. `notification-config.png` - Notification settings form
+
+## Screenshot Guidelines
+
+- Use PNG format for screenshots
+- Maintain consistent resolution (recommended: 1920x1080 or higher)
+- Crop to show relevant UI elements
+- Use descriptive filenames
+- Update this list when adding new screenshots

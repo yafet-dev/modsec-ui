@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import ReactCountryFlag from "react-country-flag";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useConfirmation } from "@/components/providers/ConfirmationProvider";
 import { useIPBans, useCreateIPBan, useDeleteIPBan } from "@/lib/api/hooks/useIPBan";
 import { IPBan } from "@/lib/api/ipBan";
+import { ipGeolocationApi } from "@/lib/api/ipGeolocation";
 
 interface IPBanListProps {
   domains: string[];
@@ -20,18 +21,52 @@ export function IPBanList({ domains, organizationId }: IPBanListProps) {
   const deleteMutation = useDeleteIPBan();
 
   const [showAddForm, setShowAddForm] = useState(false);
+  const [removingId, setRemovingId] = useState<string | null>(null);
 
   const [newIP, setNewIP] = useState("");
-  const [newCountry, setNewCountry] = useState("");
   const [newReason, setNewReason] = useState("");
   const [newDomain, setNewDomain] = useState("All");
+  const [detectedCountry, setDetectedCountry] = useState<{ code: string; name: string } | null>(null);
+  const [isDetectingCountry, setIsDetectingCountry] = useState(false);
 
   const resetForm = () => {
     setNewIP("");
-    setNewCountry("");
     setNewReason("");
     setNewDomain("All");
+    setDetectedCountry(null);
   };
+
+  // Auto-detect country when IP is entered (debounced)
+  useEffect(() => {
+    const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
+    
+    if (!newIP.trim() || !ipRegex.test(newIP)) {
+      setDetectedCountry(null);
+      return;
+    }
+
+    const timeoutId = setTimeout(async () => {
+      setIsDetectingCountry(true);
+      try {
+        const geoData = await ipGeolocationApi.getCountryFromIP(newIP);
+        if (geoData.country && geoData.countryName) {
+          setDetectedCountry({
+            code: geoData.country,
+            name: geoData.countryName,
+          });
+        } else {
+          setDetectedCountry(null);
+        }
+      } catch (error) {
+        console.error("Failed to detect country:", error);
+        setDetectedCountry(null);
+      } finally {
+        setIsDetectingCountry(false);
+      }
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [newIP]);
 
   const domainOptions = useMemo(() => ["All", ...domains], [domains]);
 
@@ -48,21 +83,27 @@ export function IPBanList({ domains, organizationId }: IPBanListProps) {
       return;
     }
 
+    // If "All" is selected, send ["*"] - backend will resolve to all organization domains
     const targetDomains = newDomain === "All" ? ["*"] : [newDomain];
 
-    createMutation.mutate({
-      organizationId,
-      data: {
-        ip: newIP,
-        domains: targetDomains,
-        country: newCountry || undefined,
-        countryName: newCountry ? undefined : undefined, // You might want to add country name lookup
-        reason: newReason || undefined,
+    createMutation.mutate(
+      {
+        organizationId,
+        data: {
+          ip: newIP,
+          domains: targetDomains,
+          // Country will be auto-detected by backend from IP
+          reason: newReason || undefined,
+        },
       },
-    });
-
-    resetForm();
-    setShowAddForm(false);
+      {
+        onSuccess: () => {
+          // Only close modal and reset form on success
+          resetForm();
+          setShowAddForm(false);
+        },
+      }
+    );
   };
 
   const handleDeleteIP = async (id: string, ip: string) => {
@@ -75,10 +116,19 @@ export function IPBanList({ domains, organizationId }: IPBanListProps) {
     });
 
     if (confirmed && organizationId) {
-      deleteMutation.mutate({
-        organizationId,
-        ipBanId: id,
-      });
+      setRemovingId(id);
+      deleteMutation.mutate(
+        {
+          organizationId,
+          ipBanId: id,
+        },
+        {
+          onSettled: () => {
+            // Clear removing state after mutation completes (success or error)
+            setRemovingId(null);
+          },
+        }
+      );
     }
   };
 
@@ -123,9 +173,9 @@ export function IPBanList({ domains, organizationId }: IPBanListProps) {
       {/* Add IP Modal (Apple-like sheet) */}
       {showAddForm && (
         <div
-          className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4 backdrop-blur-sm dark:bg-black/70"
+          className="fixed inset-0 z-[60] grid place-items-center bg-black/50 p-4 backdrop-blur-sm dark:bg-black/70"
           onClick={(e) => {
-            if (e.target === e.currentTarget) {
+            if (e.target === e.currentTarget && !createMutation.isPending) {
               setShowAddForm(false);
               resetForm();
             }
@@ -148,10 +198,13 @@ export function IPBanList({ domains, organizationId }: IPBanListProps) {
 
               <button
                 onClick={() => {
-                  setShowAddForm(false);
-                  resetForm();
+                  if (!createMutation.isPending) {
+                    setShowAddForm(false);
+                    resetForm();
+                  }
                 }}
-                className="grid h-9 w-9 place-items-center rounded-full bg-black/5 text-black/60 transition hover:bg-black/10 dark:bg-white/10 dark:text-white/70 dark:hover:bg-white/15"
+                disabled={createMutation.isPending}
+                className="grid h-9 w-9 place-items-center rounded-full bg-black/5 text-black/60 transition hover:bg-black/10 dark:bg-white/10 dark:text-white/70 dark:hover:bg-white/15 disabled:opacity-50 disabled:cursor-not-allowed"
                 aria-label="Close"
               >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -162,13 +215,34 @@ export function IPBanList({ domains, organizationId }: IPBanListProps) {
 
             <div className="border-t border-black/5 px-6 py-6 dark:border-white/10">
               <div className="space-y-4">
-                <Input
-                  label="IP Address"
-                  type="text"
-                  placeholder="192.168.1.1"
-                  value={newIP}
-                  onChange={(e) => setNewIP(e.target.value)}
-                />
+                <div>
+                  <Input
+                    label="IP Address"
+                    type="text"
+                    placeholder="192.168.1.1"
+                    value={newIP}
+                    onChange={(e) => setNewIP(e.target.value)}
+                    disabled={createMutation.isPending}
+                  />
+                  {isDetectingCountry && (
+                    <p className="mt-1 text-xs text-black/60 dark:text-white/60">
+                      Detecting country...
+                    </p>
+                  )}
+                  {detectedCountry && !isDetectingCountry && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <ReactCountryFlag
+                        countryCode={detectedCountry.code}
+                        svg
+                        style={{ width: "16px", height: "16px", borderRadius: "3px" }}
+                        title={detectedCountry.name}
+                      />
+                      <span className="text-xs text-black/70 dark:text-white/70">
+                        {detectedCountry.name}
+                      </span>
+                    </div>
+                  )}
+                </div>
 
                 <div className="w-full">
                   <label className="mb-2 block text-sm font-medium text-black/70 dark:text-white/70">
@@ -177,7 +251,8 @@ export function IPBanList({ domains, organizationId }: IPBanListProps) {
                   <select
                     value={newDomain}
                     onChange={(e) => setNewDomain(e.target.value)}
-                    className="w-full rounded-xl border border-black/10 bg-white/70 px-4 py-3 text-sm text-[#1d1d1f] shadow-sm outline-none backdrop-blur transition focus:border-black/20 focus:ring-2 focus:ring-black/10 dark:border-white/10 dark:bg-[#0f0f12] dark:text-white dark:focus:border-white/20 dark:focus:ring-white/10"
+                    disabled={createMutation.isPending}
+                    className="w-full rounded-xl border border-black/10 bg-white/70 px-4 py-3 text-sm text-[#1d1d1f] shadow-sm outline-none backdrop-blur transition focus:border-black/20 focus:ring-2 focus:ring-black/10 disabled:opacity-50 disabled:cursor-not-allowed dark:border-white/10 dark:bg-[#0f0f12] dark:text-white dark:focus:border-white/20 dark:focus:ring-white/10"
                   >
                     {domainOptions.map((d) => (
                       <option
@@ -192,30 +267,25 @@ export function IPBanList({ domains, organizationId }: IPBanListProps) {
                 </div>
 
                 <Input
-                  label="Country Code (optional)"
-                  type="text"
-                  placeholder="US, GB, FR…"
-                  value={newCountry}
-                  onChange={(e) => setNewCountry(e.target.value.toUpperCase())}
-                  maxLength={2}
-                />
-
-                <Input
                   label="Reason (optional)"
                   type="text"
                   placeholder="Why is this IP banned?"
                   value={newReason}
                   onChange={(e) => setNewReason(e.target.value)}
+                  disabled={createMutation.isPending}
                 />
               </div>
 
               <div className="mt-6 flex gap-3">
                 <button
                   onClick={() => {
-                    setShowAddForm(false);
-                    resetForm();
+                    if (!createMutation.isPending) {
+                      setShowAddForm(false);
+                      resetForm();
+                    }
                   }}
-                  className="flex-1 rounded-full border border-black/10 bg-white/60 px-4 py-2.5 text-sm font-medium text-black/70 shadow-sm backdrop-blur transition hover:bg-white/80 dark:border-white/10 dark:bg-white/5 dark:text-white/80 dark:hover:bg-white/10"
+                  disabled={createMutation.isPending}
+                  className="flex-1 rounded-full border border-black/10 bg-white/60 px-4 py-2.5 text-sm font-medium text-black/70 shadow-sm backdrop-blur transition hover:bg-white/80 disabled:opacity-50 disabled:cursor-not-allowed dark:border-white/10 dark:bg-white/5 dark:text-white/80 dark:hover:bg-white/10"
                 >
                   Cancel
                 </button>
@@ -224,7 +294,7 @@ export function IPBanList({ domains, organizationId }: IPBanListProps) {
                   disabled={createMutation.isPending || !newIP.trim()}
                   className="flex-1 rounded-full bg-[#0071e3] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:brightness-95 active:brightness-90 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {createMutation.isPending ? "Adding..." : "Add Ban"}
+                  {createMutation.isPending ? "Banning..." : "Add Ban"}
                 </button>
               </div>
             </div>
@@ -304,13 +374,13 @@ export function IPBanList({ domains, organizationId }: IPBanListProps) {
                   <div className="flex shrink-0 items-center justify-end gap-2">
                     <button
                       onClick={() => handleDeleteIP(ban.id, ban.ip)}
-                      disabled={deleteMutation.isPending}
+                      disabled={removingId === ban.id || (removingId !== null && removingId !== ban.id)}
                       className="inline-flex items-center gap-2 rounded-full border border-red-500/20 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-600 transition hover:bg-red-500/15 disabled:opacity-50 disabled:cursor-not-allowed dark:border-red-400/20 dark:bg-red-400/10 dark:text-red-300"
                     >
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                       </svg>
-                      {deleteMutation.isPending ? "Removing..." : "Remove"}
+                      {removingId === ban.id ? "Removing..." : "Remove"}
                     </button>
                   </div>
                 </div>

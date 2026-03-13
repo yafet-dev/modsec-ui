@@ -126,9 +126,16 @@ export function AttackMap({
 
   const isDark = theme === "dark";
 
-  const highCount = attacks.filter((a) => a.severity === "high").length;
-  const mediumCount = attacks.filter((a) => a.severity === "medium").length;
-  const lowCount = attacks.filter((a) => a.severity === "low").length;
+  // Sum up the attack counts by severity, not just count the number of origins
+  const highCount = attacks
+    .filter((a) => a.severity === "high")
+    .reduce((sum, a) => sum + a.count, 0);
+  const mediumCount = attacks
+    .filter((a) => a.severity === "medium")
+    .reduce((sum, a) => sum + a.count, 0);
+  const lowCount = attacks
+    .filter((a) => a.severity === "low")
+    .reduce((sum, a) => sum + a.count, 0);
 
   if (isLoading) {
     return <MapSkeleton />;

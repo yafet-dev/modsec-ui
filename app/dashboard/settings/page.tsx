@@ -471,9 +471,12 @@ export default function SettingsPage() {
             ) : activeTab === "ip-ban" ? (
               <IPBanList domains={domains} organizationId={organization?.id || null} />
             ) : activeTab === "geo-location" ? (
-              <GeoLocationAccess domains={domains} />
+              <GeoLocationAccess 
+                domains={domains} 
+                organizationId={organization?.id || null}
+              />
             ) : (
-              <NotificationsSettings domains={domains} />
+              <NotificationsSettings domains={domains} organizationId={organization?.id || null} />
             )}
           </div>
         </Section>

@@ -1,16 +1,29 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import {
+  useNotificationSettings,
+  useCreateNotificationSettings,
+  useUpdateNotificationSettings,
+  useDeleteNotificationSettings,
+  useSendSampleNotification,
+  useTelegramStatus,
+  useTelegramStartLink,
+  useTelegramDisconnect,
+  useTelegramTest,
+} from "@/lib/api/hooks/useNotificationSettings";
+import type { NotificationSettings, TelegramStartLinkResponse } from "@/lib/api/notificationSettings";
 
-type NotificationType = "email" | "telegram" | "whatsapp";
+type NotificationType = "email" | "telegram";
 type SeverityFilter = "all" | "critical" | "high" | "low";
 type DomainFilter = "all" | "specific";
 
 interface NotificationsSettingsProps {
   domains: string[];
+  organizationId: string | null;
 }
 
 function Section({
@@ -262,10 +275,12 @@ function NotificationSummary({
   settings,
   onEdit,
   onRemove,
+  isRemoving = false,
 }: {
-  settings: SavedNotificationSettings;
+  settings: NotificationSettings;
   onEdit: () => void;
   onRemove: () => void;
+  isRemoving?: boolean;
 }) {
   const getChannelIcon = () => {
     if (settings.notificationType === "email") {
@@ -279,16 +294,10 @@ function NotificationSummary({
           />
         </svg>
       );
-    } else if (settings.notificationType === "telegram") {
-      return (
-        <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.13-.041-.186-.024c-.082.03-1.375.87-3.973 2.556-.376.2-.715.298-.996.29-.34-.01-.995-.192-1.48-.35-.765-.243-1.37-.375-1.32-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
-        </svg>
-      );
     } else {
       return (
         <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
+          <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.13-.041-.186-.024c-.082.03-1.375.87-3.973 2.556-.376.2-.715.298-.996.29-.34-.01-.995-.192-1.48-.35-.765-.243-1.37-.375-1.32-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
         </svg>
       );
     }
@@ -303,10 +312,11 @@ function NotificationSummary({
       return settings.emailList.length > 0
         ? `${settings.emailList.length} email${settings.emailList.length > 1 ? "s" : ""}`
         : "No emails";
-    } else if (settings.notificationType === "telegram") {
-      return settings.telegramChatId || "Not configured";
     } else {
-      return settings.whatsappNumber || "Not configured";
+      if (settings.telegramEnabled && settings.telegramChatId) {
+        return `Connected (chat ${settings.telegramChatId})`;
+      }
+      return "Not connected";
     }
   };
 
@@ -359,11 +369,17 @@ function NotificationSummary({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button onClick={onEdit} variant="outline" size="sm">
+            <Button onClick={onEdit} variant="outline" size="sm" disabled={isRemoving}>
               Edit
             </Button>
-            <Button onClick={onRemove} variant="outline" size="sm" className="text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300">
-              Remove
+            <Button 
+              onClick={onRemove} 
+              variant="outline" 
+              size="sm" 
+              disabled={isRemoving}
+              className="text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isRemoving ? "Removing..." : "Remove"}
             </Button>
           </div>
         </div>
@@ -372,34 +388,374 @@ function NotificationSummary({
   );
 }
 
-interface SavedNotificationSettings {
-  notificationType: NotificationType;
-  emailList: string[];
-  telegramChatId: string;
-  whatsappNumber: string;
-  domainFilter: DomainFilter;
-  selectedDomains: string[];
-  severityFilter: SeverityFilter;
+// ---------------------------------------------------------------------------
+// Telegram Connect Section — handles the full connect / status / disconnect flow
+// ---------------------------------------------------------------------------
+function TelegramConnectSection({
+  organizationId,
+}: {
+  organizationId: string | null;
+}) {
+  const [linkData, setLinkData] = useState<TelegramStartLinkResponse | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const {
+    data: telegramStatus,
+    isLoading: isLoadingStatus,
+  } = useTelegramStatus(organizationId || undefined);
+
+  const startLinkMutation = useTelegramStartLink(organizationId || undefined);
+  const disconnectMutation = useTelegramDisconnect(organizationId || undefined);
+  const testMutation = useTelegramTest(organizationId || undefined);
+
+  // Once connected, clear the link data
+  useEffect(() => {
+    if (telegramStatus?.connected && linkData) {
+      setLinkData(null);
+    }
+  }, [telegramStatus?.connected, linkData]);
+
+  const handleGenerateLink = async () => {
+    if (!organizationId) return;
+    try {
+      const result = await startLinkMutation.mutateAsync();
+      setLinkData(result);
+    } catch {
+      // error handled by hook
+    }
+  };
+
+  const handleCopyLink = async () => {
+    if (!linkData?.deepLink) return;
+    try {
+      await navigator.clipboard.writeText(linkData.deepLink);
+      setCopied(true);
+      toast.success("Link copied to clipboard");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Failed to copy link");
+    }
+  };
+
+  const handleDisconnect = async () => {
+    if (!organizationId) return;
+    try {
+      await disconnectMutation.mutateAsync();
+    } catch {
+      // error handled by hook
+    }
+  };
+
+  const handleSendTest = async () => {
+    try {
+      await testMutation.mutateAsync();
+    } catch {
+      // error handled by hook
+    }
+  };
+
+  // Loading
+  if (isLoadingStatus) {
+    return (
+      <div className="flex items-center gap-3 py-4">
+        <div className="h-5 w-5 animate-spin rounded-full border-2 border-zinc-900/20 border-t-zinc-900 dark:border-white/20 dark:border-t-white" />
+        <span className="text-[13px] text-zinc-500 dark:text-zinc-400">
+          Checking Telegram connection…
+        </span>
+      </div>
+    );
+  }
+
+  // ——— CONNECTED STATE ———
+  if (telegramStatus?.connected) {
+    return (
+      <div className="space-y-4">
+        <div className="rounded-2xl border border-emerald-200 dark:border-emerald-800/50 bg-emerald-50/50 dark:bg-emerald-950/20 backdrop-blur p-5">
+          <div className="flex items-start gap-4">
+            {/* Green check icon */}
+            <div className="h-10 w-10 rounded-2xl bg-emerald-500 flex items-center justify-center flex-shrink-0">
+              <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-[14px] font-semibold text-emerald-800 dark:text-emerald-300">
+                Telegram Connected
+              </div>
+              <div className="mt-1 text-[13px] text-emerald-700/80 dark:text-emerald-400/80">
+                Chat ID: <span className="font-mono">{telegramStatus.telegramChatId}</span>
+              </div>
+              {telegramStatus.connectedAt && (
+                <div className="mt-0.5 text-[12px] text-emerald-600/60 dark:text-emerald-400/50">
+                  Connected {new Date(telegramStatus.connectedAt).toLocaleDateString(undefined, {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                type="button"
+                onClick={handleSendTest}
+                disabled={testMutation.isPending}
+                className="rounded-full border border-emerald-300 dark:border-emerald-700 bg-white/80 dark:bg-white/5 px-4 py-2 text-[13px] font-medium text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-colors disabled:opacity-50"
+              >
+                {testMutation.isPending ? "Sending…" : "Send Test"}
+              </button>
+              <button
+                type="button"
+                onClick={handleDisconnect}
+                disabled={disconnectMutation.isPending}
+                className="rounded-full border border-rose-200 dark:border-rose-800 bg-white/80 dark:bg-white/5 px-4 py-2 text-[13px] font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 transition-colors disabled:opacity-50"
+              >
+                {disconnectMutation.isPending ? "Disconnecting…" : "Disconnect"}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-black/5 dark:border-white/10 bg-white/60 dark:bg-white/5 backdrop-blur p-4">
+          <div className="text-[13px] text-zinc-600 dark:text-zinc-300">
+            💡 WAF attack alerts matching your filters will be sent to this Telegram chat automatically.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ——— LINK GENERATED (waiting for user to connect in Telegram) ———
+  if (linkData) {
+    // Check if link is expired
+    const isExpired = new Date(linkData.expiresAt) < new Date();
+
+    return (
+      <div className="space-y-4">
+        {/* Step indicator */}
+        <div className="flex items-center gap-2 text-[13px] text-zinc-500 dark:text-zinc-400">
+          <div className="h-5 w-5 animate-pulse rounded-full bg-blue-500/20 flex items-center justify-center">
+            <div className="h-2 w-2 rounded-full bg-blue-500" />
+          </div>
+          Waiting for you to connect in Telegram…
+        </div>
+
+        <div className="rounded-2xl border border-blue-200 dark:border-blue-800/50 bg-blue-50/30 dark:bg-blue-950/20 backdrop-blur p-5 space-y-4">
+          {/* Deep link */}
+          {linkData.deepLink && !isExpired && (
+            <div>
+              <div className="text-[13px] font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                Step 1: Open this link in Telegram
+              </div>
+              <div className="flex items-stretch gap-2">
+                <div className="flex-1 rounded-xl border border-blue-200 dark:border-blue-700/50 bg-white/80 dark:bg-white/5 px-4 py-3 text-[13px] font-mono text-blue-700 dark:text-blue-300 truncate select-all">
+                  {linkData.deepLink}
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCopyLink}
+                  className="rounded-xl border border-blue-200 dark:border-blue-700/50 bg-white/80 dark:bg-white/5 px-4 flex items-center gap-2 text-[13px] font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
+                >
+                  {copied ? (
+                    <>
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      Copied
+                    </>
+                  ) : (
+                    <>
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                      Copy
+                    </>
+                  )}
+                </button>
+              </div>
+              <a
+                href={linkData.deepLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 inline-flex items-center gap-2 rounded-full bg-[#2AABEE] hover:bg-[#229ED9] text-white px-5 py-2.5 text-[13px] font-semibold transition-colors"
+              >
+                <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.13-.041-.186-.024c-.082.03-1.375.87-3.973 2.556-.376.2-.715.298-.996.29-.34-.01-.995-.192-1.48-.35-.765-.243-1.37-.375-1.32-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
+                </svg>
+                Open in Telegram
+              </a>
+            </div>
+          )}
+
+          {/* Divider */}
+          <div className="flex items-center gap-3 py-1">
+            <div className="flex-1 h-px bg-blue-200 dark:bg-blue-700/50" />
+            <span className="text-[12px] font-medium text-blue-400 dark:text-blue-500 uppercase tracking-wider">
+              or connect manually
+            </span>
+            <div className="flex-1 h-px bg-blue-200 dark:bg-blue-700/50" />
+          </div>
+
+          {/* Manual connect instructions */}
+          <div>
+            <div className="text-[13px] font-medium text-zinc-700 dark:text-zinc-300 mb-3">
+              Manual Steps:
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-start gap-3">
+                <span className="flex-shrink-0 h-6 w-6 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-[12px] font-bold">1</span>
+                <div className="text-[13px] text-zinc-600 dark:text-zinc-400">
+                  Open Telegram and search for <span className="font-semibold text-zinc-800 dark:text-zinc-200">{linkData.botUsername ? `@${linkData.botUsername}` : "the bot"}</span>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="flex-shrink-0 h-6 w-6 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-[12px] font-bold">2</span>
+                <div className="text-[13px] text-zinc-600 dark:text-zinc-400">
+                  Press <span className="font-semibold text-zinc-800 dark:text-zinc-200">Start</span> or type <code className="px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/40 font-mono text-[12px] text-blue-700 dark:text-blue-300">/start</code>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="flex-shrink-0 h-6 w-6 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-[12px] font-bold">3</span>
+                <div className="text-[13px] text-zinc-600 dark:text-zinc-400">
+                  Send this message to the bot:
+                </div>
+              </div>
+            </div>
+            <div className="mt-2 ml-9 flex items-stretch gap-2">
+              <div className="flex-1 rounded-xl border border-blue-200 dark:border-blue-700/50 bg-white/80 dark:bg-white/5 px-4 py-3 font-mono text-[14px] font-bold text-blue-700 dark:text-blue-300 select-all">
+                /start {linkData.connectCode}
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(`/start ${linkData.connectCode}`);
+                  setCopied(true);
+                  toast.success("Command copied!");
+                  setTimeout(() => setCopied(false), 2000);
+                }}
+                className="rounded-xl border border-blue-200 dark:border-blue-700/50 bg-white/80 dark:bg-white/5 px-4 flex items-center gap-2 text-[13px] font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                Copy
+              </button>
+            </div>
+            <div className="mt-3 ml-9">
+              <div className="flex items-start gap-3">
+                <span className="flex-shrink-0 h-6 w-6 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-[12px] font-bold">✓</span>
+                <div className="text-[13px] text-zinc-600 dark:text-zinc-400">
+                  The bot will confirm the connection — this page will update automatically
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Expiry */}
+          <div className="text-[12px] text-zinc-500 dark:text-zinc-400">
+            {isExpired ? (
+              <span className="text-rose-500">⏰ This code has expired. Click &quot;Generate New Code&quot; below.</span>
+            ) : (
+              <>⏱ Code expires at {new Date(linkData.expiresAt).toLocaleTimeString()} (10 minutes)</>
+            )}
+          </div>
+        </div>
+
+        {/* Regenerate button */}
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={handleGenerateLink}
+            disabled={startLinkMutation.isPending}
+            className="rounded-full border border-black/5 dark:border-white/10 bg-white/70 dark:bg-white/5 px-5 py-2.5 text-[13px] font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-white/10 transition-colors disabled:opacity-50"
+          >
+            {startLinkMutation.isPending ? "Generating…" : "Generate New Code"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setLinkData(null)}
+            className="rounded-full border border-black/5 dark:border-white/10 bg-white/70 dark:bg-white/5 px-5 py-2.5 text-[13px] font-medium text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-white/10 transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ——— NOT CONNECTED — show Connect button ———
+  return (
+    <div className="space-y-4">
+      <div className="rounded-2xl border border-black/5 dark:border-white/10 bg-white/60 dark:bg-white/5 backdrop-blur p-6 text-center">
+        <div className="mx-auto h-14 w-14 rounded-2xl bg-[#2AABEE]/10 flex items-center justify-center mb-4">
+          <svg className="h-7 w-7 text-[#2AABEE]" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.13-.041-.186-.024c-.082.03-1.375.87-3.973 2.556-.376.2-.715.298-.996.29-.34-.01-.995-.192-1.48-.35-.765-.243-1.37-.375-1.32-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
+          </svg>
+        </div>
+
+        <h4 className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-100 mb-1">
+          Connect Telegram
+        </h4>
+        <p className="text-[13px] text-zinc-500 dark:text-zinc-400 mb-5 max-w-sm mx-auto">
+          Link your Telegram account to receive WAF attack alerts instantly in your chat.
+        </p>
+
+        <button
+          type="button"
+          onClick={handleGenerateLink}
+          disabled={startLinkMutation.isPending || !organizationId}
+          className="inline-flex items-center gap-2 rounded-full bg-[#2AABEE] hover:bg-[#229ED9] text-white px-6 py-3 text-[14px] font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.13-.041-.186-.024c-.082.03-1.375.87-3.973 2.556-.376.2-.715.298-.996.29-.34-.01-.995-.192-1.48-.35-.765-.243-1.37-.375-1.32-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
+          </svg>
+          {startLinkMutation.isPending ? "Generating Link…" : "Connect Telegram"}
+        </button>
+      </div>
+
+      <div className="rounded-2xl border border-black/5 dark:border-white/10 bg-white/60 dark:bg-white/5 backdrop-blur p-4">
+        <div className="text-[13px] text-zinc-600 dark:text-zinc-300">
+          <span className="font-medium">How it works:</span> Click "Connect Telegram" to generate a secure link.
+          Open the link in Telegram, tap <span className="font-medium">Start</span>,
+          and your account will be linked automatically.
+        </div>
+      </div>
+    </div>
+  );
 }
 
-export function NotificationsSettings({ domains }: NotificationsSettingsProps) {
+export function NotificationsSettings({ domains, organizationId }: NotificationsSettingsProps) {
   const [isEditMode, setIsEditMode] = useState(false);
-  const [savedSettings, setSavedSettings] = useState<SavedNotificationSettings | null>(null);
+  const [editingSettingsId, setEditingSettingsId] = useState<string | null>(null);
+  const [removingSettingsId, setRemovingSettingsId] = useState<string | null>(null);
+
+  // Fetch notification settings from backend
+  const {
+    data: notificationSettingsData,
+    isLoading: isLoadingSettings,
+  } = useNotificationSettings(organizationId || undefined);
+
+  const createMutation = useCreateNotificationSettings(organizationId || undefined);
+  const updateMutation = useUpdateNotificationSettings(organizationId || undefined);
+  const deleteMutation = useDeleteNotificationSettings(organizationId || undefined);
+  const sendSampleMutation = useSendSampleNotification(organizationId || undefined);
+
+  const savedSettings = notificationSettingsData?.settings || [];
 
   const [notificationType, setNotificationType] = useState<NotificationType>("email");
   const [emailList, setEmailList] = useState<string[]>([]);
   const [newEmail, setNewEmail] = useState("");
   const [telegramChatId, setTelegramChatId] = useState("");
-  const [whatsappNumber, setWhatsappNumber] = useState("");
   const [domainFilter, setDomainFilter] = useState<DomainFilter>("all");
   const [selectedDomains, setSelectedDomains] = useState<string[]>([]);
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>("all");
 
   const canSendSample = useMemo(() => {
     if (notificationType === "email") return emailList.length > 0;
-    if (notificationType === "telegram") return telegramChatId.trim().length > 0;
-    return whatsappNumber.trim().length > 0;
-  }, [notificationType, emailList.length, telegramChatId, whatsappNumber]);
+    return true; // Telegram sample is handled by the connect section
+  }, [notificationType, emailList.length]);
 
   const handleAddEmail = () => {
     const value = newEmail.trim();
@@ -419,86 +775,131 @@ export function NotificationsSettings({ domains }: NotificationsSettingsProps) {
     toast.success("Email removed");
   };
 
+  const telegramTestMutation = useTelegramTest(organizationId || undefined);
+
   const handleSendSample = async () => {
-    if (!canSendSample) {
-      if (notificationType === "email") return toast.error("Please add at least one email address");
-      if (notificationType === "telegram") return toast.error("Please enter a Telegram chat ID");
-      return toast.error("Please enter a WhatsApp number");
+    if (!organizationId) {
+      toast.error("Organization ID is required");
+      return;
     }
 
-    if (notificationType === "email") {
-      toast.success(`Sample email sent to ${emailList.length} recipient(s)`);
-    } else if (notificationType === "telegram") {
-      toast.success("Sample Telegram message sent");
-    } else {
-      toast.success("Sample WhatsApp message sent");
+    try {
+      if (notificationType === "email") {
+        if (emailList.length === 0) {
+          return toast.error("Please add at least one email address");
+        }
+        await sendSampleMutation.mutateAsync({
+          notificationType: "email",
+          emailList: emailList,
+        });
+      } else {
+        // Telegram — send a sample WAF alert via the same send-sample endpoint
+        await sendSampleMutation.mutateAsync({
+          notificationType: "telegram",
+        });
+      }
+    } catch {
+      // Error is handled by the mutation hook
     }
   };
 
-  const handleEdit = () => {
-    if (savedSettings) {
-      // Load saved settings into form
-      setNotificationType(savedSettings.notificationType);
-      setEmailList(savedSettings.emailList);
-      setTelegramChatId(savedSettings.telegramChatId);
-      setWhatsappNumber(savedSettings.whatsappNumber);
-      setDomainFilter(savedSettings.domainFilter);
-      setSelectedDomains(savedSettings.selectedDomains);
-      setSeverityFilter(savedSettings.severityFilter);
-    }
+  const handleEdit = (settings: NotificationSettings) => {
+    // Load saved settings into form
+    setNotificationType(settings.notificationType);
+    setEmailList(settings.emailList);
+    setTelegramChatId(settings.telegramChatId || "");
+    setDomainFilter(settings.domainFilter);
+    setSelectedDomains(settings.selectedDomains);
+    setSeverityFilter(settings.severityFilter);
+    setEditingSettingsId(settings.id);
     setIsEditMode(true);
   };
 
   const handleCancel = () => {
     setIsEditMode(false);
-    // Reset to saved settings or defaults
-    if (savedSettings) {
-      setNotificationType(savedSettings.notificationType);
-      setEmailList(savedSettings.emailList);
-      setTelegramChatId(savedSettings.telegramChatId);
-      setWhatsappNumber(savedSettings.whatsappNumber);
-      setDomainFilter(savedSettings.domainFilter);
-      setSelectedDomains(savedSettings.selectedDomains);
-      setSeverityFilter(savedSettings.severityFilter);
-    } else {
-      // Reset to defaults
-      setNotificationType("email");
-      setEmailList([]);
-      setTelegramChatId("");
-      setWhatsappNumber("");
-      setDomainFilter("all");
-      setSelectedDomains([]);
-      setSeverityFilter("all");
-    }
-  };
-
-  const handleSave = () => {
-    const settings: SavedNotificationSettings = {
-      notificationType,
-      emailList,
-      telegramChatId,
-      whatsappNumber,
-      domainFilter,
-      selectedDomains,
-      severityFilter,
-    };
-    setSavedSettings(settings);
-    setIsEditMode(false);
-    toast.success("Notification settings saved successfully");
-  };
-
-  const handleRemove = () => {
-    setSavedSettings(null);
-    setIsEditMode(false);
+    setEditingSettingsId(null);
     // Reset to defaults
     setNotificationType("email");
     setEmailList([]);
     setTelegramChatId("");
-    setWhatsappNumber("");
     setDomainFilter("all");
     setSelectedDomains([]);
     setSeverityFilter("all");
-    toast.success("Notification settings removed");
+  };
+
+  const handleSave = async () => {
+    if (!organizationId) {
+      toast.error("Organization ID is required");
+      return;
+    }
+
+    // Validate required fields
+    if (notificationType === "email" && emailList.length === 0) {
+      toast.error("Please add at least one email address");
+      return;
+    }
+
+    // Telegram chat ID is set automatically via the connect flow, skip manual validation
+
+    if (domainFilter === "specific" && selectedDomains.length === 0) {
+      toast.error("Please select at least one domain");
+      return;
+    }
+
+    const data = {
+      notificationType,
+      emailList: notificationType === "email" ? emailList : [],
+      telegramChatId: undefined, // Chat ID is set via the Telegram connect flow
+      domainFilter,
+      selectedDomains: domainFilter === "specific" ? selectedDomains : [],
+      severityFilter,
+      enabled: true,
+    };
+
+    try {
+      if (editingSettingsId) {
+        // Update existing settings - wait for response
+        await updateMutation.mutateAsync({
+          settingsId: editingSettingsId,
+          data,
+        });
+      } else {
+        // Create new settings - wait for response
+        await createMutation.mutateAsync(data);
+      }
+      // Only reset form and exit edit mode after successful response
+      setIsEditMode(false);
+      setEditingSettingsId(null);
+      // Reset form
+      setNotificationType("email");
+      setEmailList([]);
+      setTelegramChatId("");
+      setDomainFilter("all");
+      setSelectedDomains([]);
+      setSeverityFilter("all");
+    } catch (error) {
+      // Error is handled by the mutation hook's onError callback
+      // Don't reset form or exit edit mode on error
+      console.error("Failed to save notification settings:", error);
+    }
+  };
+
+  const handleRemove = async (settingsId: string) => {
+    if (!organizationId) {
+      toast.error("Organization ID is required");
+      return;
+    }
+
+    setRemovingSettingsId(settingsId);
+    try {
+      // Wait for delete to complete before showing success
+      await deleteMutation.mutateAsync(settingsId);
+    } catch (error) {
+      // Error is handled by the mutation hook's onError callback
+      console.error("Failed to delete notification settings:", error);
+    } finally {
+      setRemovingSettingsId(null);
+    }
   };
 
   const handleAddNew = () => {
@@ -506,15 +907,41 @@ export function NotificationsSettings({ domains }: NotificationsSettingsProps) {
     setNotificationType("email");
     setEmailList([]);
     setTelegramChatId("");
-    setWhatsappNumber("");
     setDomainFilter("all");
     setSelectedDomains([]);
     setSeverityFilter("all");
     setIsEditMode(true);
   };
 
+  // Show loading state
+  if (isLoadingSettings) {
+    return (
+      <div className="space-y-7">
+        <div className="rounded-3xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur-xl p-10 text-center">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-zinc-900/20 border-t-zinc-900 dark:border-white/20 dark:border-t-white" />
+          <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400">
+            Loading notification settings...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error if no organization
+  if (!organizationId) {
+    return (
+      <div className="space-y-7">
+        <div className="rounded-3xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur-xl p-10 text-center">
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            No organization found. Please ensure you are a member of an organization.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   // Show summary if settings exist and not in edit mode
-  if (savedSettings && !isEditMode) {
+  if (savedSettings.length > 0 && !isEditMode) {
     return (
       <div className="space-y-7">
         {/* Header */}
@@ -529,12 +956,18 @@ export function NotificationsSettings({ domains }: NotificationsSettingsProps) {
           </div>
         </div>
 
-        {/* Summary */}
-        <NotificationSummary
-          settings={savedSettings}
-          onEdit={handleEdit}
-          onRemove={handleRemove}
-        />
+        {/* Summary List */}
+        <div className="space-y-4">
+          {savedSettings.map((setting) => (
+            <NotificationSummary
+              key={setting.id}
+              settings={setting}
+              onEdit={() => handleEdit(setting)}
+              onRemove={() => handleRemove(setting.id)}
+              isRemoving={removingSettingsId === setting.id}
+            />
+          ))}
+        </div>
 
         {/* Add Another Button */}
         <div className="flex justify-end">
@@ -571,7 +1004,7 @@ export function NotificationsSettings({ domains }: NotificationsSettingsProps) {
   }
 
   // Show add button if no settings exist and not in edit mode
-  if (!savedSettings && !isEditMode) {
+  if (savedSettings.length === 0 && !isEditMode) {
     return (
       <div className="space-y-7">
         {/* Header */}
@@ -645,7 +1078,7 @@ export function NotificationsSettings({ domains }: NotificationsSettingsProps) {
       <div className="flex items-end justify-between gap-4">
         <div>
           <h2 className="text-[28px] font-semibold tracking-[-0.02em] text-zinc-900 dark:text-zinc-100">
-            {savedSettings ? "Edit Notification Settings" : "Add Notification Settings"}
+            {editingSettingsId ? "Edit Notification Settings" : "Add Notification Settings"}
           </h2>
           <p className="mt-1 text-[13px] text-zinc-500 dark:text-zinc-400">
             Configure how you receive WAF security alerts and summaries.
@@ -667,7 +1100,7 @@ export function NotificationsSettings({ domains }: NotificationsSettingsProps) {
         title="Notification Channels"
         description="Pick one channel for alerts. (You can later extend this to multi-channel.)"
       >
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <TileButton
             active={notificationType === "email"}
             title="Email"
@@ -694,18 +1127,6 @@ export function NotificationsSettings({ domains }: NotificationsSettingsProps) {
             icon={
               <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.13-.041-.186-.024c-.082.03-1.375.87-3.973 2.556-.376.2-.715.298-.996.29-.34-.01-.995-.192-1.48-.35-.765-.243-1.37-.375-1.32-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
-              </svg>
-            }
-          />
-          <TileButton
-            active={notificationType === "whatsapp"}
-            title="WhatsApp"
-            subtitle="Receive notifications via WhatsApp."
-            tint="green"
-            onClick={() => setNotificationType("whatsapp")}
-            icon={
-              <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
               </svg>
             }
           />
@@ -849,9 +1270,7 @@ export function NotificationsSettings({ domains }: NotificationsSettingsProps) {
         title={
           notificationType === "email"
             ? "Email Configuration"
-            : notificationType === "telegram"
-            ? "Telegram Configuration"
-            : "WhatsApp Configuration"
+            : "Telegram Configuration"
         }
         description="Set destination details and test delivery."
         right={
@@ -859,6 +1278,7 @@ export function NotificationsSettings({ domains }: NotificationsSettingsProps) {
             onClick={handleSendSample}
             variant="outline"
             size="sm"
+            disabled={sendSampleMutation.isPending}
             className="flex items-center gap-2"
           >
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -869,7 +1289,7 @@ export function NotificationsSettings({ domains }: NotificationsSettingsProps) {
                 d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
               />
             </svg>
-            <span>Send Sample</span>
+            <span>{sendSampleMutation.isPending ? "Sending..." : "Send Sample"}</span>
           </Button>
         }
       >
@@ -911,61 +1331,29 @@ export function NotificationsSettings({ domains }: NotificationsSettingsProps) {
         )}
 
         {notificationType === "telegram" && (
-          <div className="space-y-3 max-w-xl">
-            <Input
-              label="Telegram Chat ID"
-              type="text"
-              placeholder="Enter your Telegram chat ID…"
-              value={telegramChatId}
-              onChange={(e) => setTelegramChatId(e.target.value)}
-              className={[
-                "rounded-2xl",
-                "bg-white/70 dark:bg-white/5 backdrop-blur-xl",
-                "border border-black/5 dark:border-white/10",
-                "focus:ring-2 focus:ring-zinc-900/15 dark:focus:ring-white/15",
-              ].join(" ")}
-            />
-            <p className="text-[12px] leading-5 text-zinc-500 dark:text-zinc-400">
-              To get your chat ID, start a conversation with @BotFather on Telegram.
-            </p>
-          </div>
+          <TelegramConnectSection organizationId={organizationId} />
         )}
-
-        {notificationType === "whatsapp" && (
-          <div className="space-y-3 max-w-xl">
-            <Input
-              label="WhatsApp Number"
-              type="tel"
-              placeholder="+1234567890"
-              value={whatsappNumber}
-              onChange={(e) => setWhatsappNumber(e.target.value)}
-              className={[
-                "rounded-2xl",
-                "bg-white/70 dark:bg-white/5 backdrop-blur-xl",
-                "border border-black/5 dark:border-white/10",
-                "focus:ring-2 focus:ring-zinc-900/15 dark:focus:ring-white/15",
-              ].join(" ")}
-            />
-            <p className="text-[12px] leading-5 text-zinc-500 dark:text-zinc-400">
-              Use international format (example: +1234567890).
-            </p>
-          </div>
-        )}
-
-        <div className="mt-6 rounded-2xl border border-black/5 dark:border-white/10 bg-white/60 dark:bg-white/5 backdrop-blur p-4">
-          <div className="text-[13px] text-zinc-600 dark:text-zinc-300">
-            Tip: Keep your test message short and include the domain + severity so delivery issues are easier to debug.
-          </div>
-        </div>
       </Section>
 
       {/* Save/Cancel */}
       <div className="flex justify-end gap-3">
-        <Button onClick={handleCancel} variant="outline" size="md">
+        <Button
+          onClick={handleCancel}
+          variant="outline"
+          size="md"
+          disabled={createMutation.isPending || updateMutation.isPending}
+        >
           Cancel
         </Button>
-        <Button onClick={handleSave} variant="primary" size="md">
-          Save Settings
+        <Button
+          onClick={handleSave}
+          variant="primary"
+          size="md"
+          disabled={createMutation.isPending || updateMutation.isPending}
+        >
+          {createMutation.isPending || updateMutation.isPending
+            ? "Saving..."
+            : "Save Settings"}
         </Button>
       </div>
 

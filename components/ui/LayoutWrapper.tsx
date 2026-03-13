@@ -35,16 +35,20 @@ export function LayoutWrapper({ children }: LayoutWrapperProps) {
           <div className="px-6">
             <div className="flex items-center justify-between h-16">
               <div className="flex items-center gap-4">
-                <span className="text-sm text-gray-600 dark:text-gray-400">
-                  {user?.email}
-                </span>
-                {currentRole && (
-                  <span className="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
-                    {currentRole === "super_admin"
-                      ? "Super Admin"
-                      : currentRole.charAt(0).toUpperCase() +
-                        currentRole.slice(1)}
-                  </span>
+                {user && (
+                  <>
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">
+                      {user.fullName || user.email.split("@")[0]}
+                    </span>
+                    {currentRole && (
+                      <span className="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+                        {currentRole === "super_admin"
+                          ? "Super Admin"
+                          : currentRole.charAt(0).toUpperCase() +
+                            currentRole.slice(1)}
+                      </span>
+                    )}
+                  </>
                 )}
               </div>
               <div className="flex items-center gap-4">

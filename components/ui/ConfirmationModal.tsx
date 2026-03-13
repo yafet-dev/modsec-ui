@@ -98,7 +98,7 @@ export function ConfirmationModal({
   return (
     <div
       className={[
-        "fixed inset-0 z-50 flex items-center justify-center p-4",
+        "fixed inset-0 z-[60] flex items-center justify-center p-4",
         "bg-black/35 dark:bg-black/55",
         "backdrop-blur-md",
       ].join(" ")}
