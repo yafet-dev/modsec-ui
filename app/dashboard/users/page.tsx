@@ -17,7 +17,7 @@ import {
 import toast from "react-hot-toast";
 
 export default function UsersPage() {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated } = useAuth();
   const { currentRole } = useRole();
   const router = useRouter();
 
@@ -30,7 +30,6 @@ export default function UsersPage() {
   const inviteUser = useInviteUser();
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [selectedEmail, setSelectedEmail] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -60,13 +59,6 @@ export default function UsersPage() {
         },
       }
     );
-  };
-
-  const handleInviteUser = (userId: string) => {
-    // Resend invitation - this would need a separate API endpoint
-    toast.success("Invitation resent", {
-      icon: "✉️",
-    });
   };
 
   const handleDeleteUser = (userId: string) => {
@@ -173,9 +165,6 @@ export default function UsersPage() {
           {/* Users Table */}
           <UsersTable
             members={members}
-            selectedEmail={selectedEmail}
-            onEmailClick={setSelectedEmail}
-            onInvite={handleInviteUser}
             onDelete={handleDeleteUser}
             onToggleStatus={handleToggleUserStatus}
           />

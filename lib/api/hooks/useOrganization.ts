@@ -1,7 +1,12 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { organizationApi, CreateOrganizationRequest, UpdateOrganizationRequest } from '../organization';
+import {
+  organizationApi,
+  CreateOrganizationRequest,
+  UpdateOrganizationRequest,
+  SummaryReportSettingsRequest,
+} from '../organization';
 import toast from 'react-hot-toast';
 
 // Get all organizations
@@ -63,6 +68,53 @@ export function useUpdateOrganization() {
     },
     onError: (error: any) => {
       const message = error.response?.data?.message || 'Failed to update organization. Please try again.';
+      toast.error(message);
+    },
+  });
+}
+
+// One-time 7-day summary email (org admin only)
+export function useSendSummaryReportNow() {
+  return useMutation({
+    mutationFn: ({
+      organizationId,
+      emails,
+    }: {
+      organizationId: string;
+      emails: string[];
+    }) => organizationApi.sendSummaryReportNow(organizationId, { emails }),
+    onSuccess: (data) => {
+      toast.success(
+        `Sent ${data.sent} report email${data.sent === 1 ? "" : "s"} (last 7 days)`
+      );
+    },
+    onError: (error: any) => {
+      const message =
+        error.response?.data?.message || "Could not send the report. Check SMTP and try again.";
+      toast.error(message);
+    },
+  });
+}
+
+// Summary report settings (org admin only)
+export function useUpdateSummaryReport() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      organizationId,
+      data,
+    }: {
+      organizationId: string;
+      data: SummaryReportSettingsRequest;
+    }) => organizationApi.updateSummaryReport(organizationId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['organizations', 'my'] });
+      toast.success('Summary report settings saved');
+    },
+    onError: (error: any) => {
+      const message =
+        error.response?.data?.message || 'Failed to save summary report settings.';
       toast.error(message);
     },
   });

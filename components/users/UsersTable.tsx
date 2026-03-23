@@ -1,13 +1,9 @@
 "use client";
 
 import { type OrganizationMember } from "@/lib/api/organizationMembers";
-import { Button } from "@/components/ui/Button";
 
 interface UsersTableProps {
   members: OrganizationMember[];
-  selectedEmail: string | null;
-  onEmailClick: (email: string | null) => void;
-  onInvite: (userId: string) => void;
   onDelete: (userId: string) => void;
   onToggleStatus: (userId: string) => void;
 }
@@ -92,9 +88,6 @@ function StatusBadge({
 
 export function UsersTable({
   members,
-  selectedEmail,
-  onEmailClick,
-  onInvite,
   onDelete,
   onToggleStatus,
 }: UsersTableProps) {
@@ -153,8 +146,6 @@ export function UsersTable({
           <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
             {members.map((member) => {
               const user = member.user;
-              const isSelected = selectedEmail === user.email;
-              const isPending = member.status === "pending";
               const displayName = user.fullName || user.email.split("@")[0];
 
               return (
@@ -173,18 +164,9 @@ export function UsersTable({
                     </div>
                   </td>
                   <td className="px-6 py-5">
-                    <button
-                      onClick={() =>
-                        onEmailClick(isSelected ? null : user.email)
-                      }
-                      className={`text-sm font-mono transition-colors ${
-                        isSelected
-                          ? "text-blue-600 dark:text-blue-400 font-semibold"
-                          : "text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400"
-                      }`}
-                    >
+                    <span className="text-sm font-mono text-gray-600 dark:text-gray-300">
                       {user.email}
-                    </button>
+                    </span>
                   </td>
                   <td className="px-6 py-5">
                     <RoleBadge role={member.role} />
@@ -202,17 +184,6 @@ export function UsersTable({
                   </td>
                   <td className="px-6 py-5">
                     <div className="flex items-center justify-end gap-2">
-                      {isSelected && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => onInvite(user.id)}
-                          disabled={!isPending}
-                          className="mr-2"
-                        >
-                          {isPending ? "Resend Invite" : "Invite"}
-                        </Button>
-                      )}
                       <button
                         onClick={() => onToggleStatus(user.id)}
                         className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${

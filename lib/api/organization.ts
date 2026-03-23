@@ -8,6 +8,10 @@ export interface Organization {
   status: 'active' | 'pending' | 'suspended' | 'disabled';
   createdAt: string;
   updatedAt: string;
+  /** WAF summary emails: one message per domain per schedule */
+  summaryReportEnabled?: boolean;
+  summaryReportFrequency?: 'hourly' | 'daily' | 'weekly' | 'monthly' | string;
+  summaryReportEmails?: string[];
   members?: OrganizationMember[];
 }
 
@@ -36,6 +40,12 @@ export interface UpdateOrganizationRequest {
   name?: string;
   domains?: string[];
   status?: 'active' | 'pending' | 'suspended' | 'disabled';
+}
+
+export interface SummaryReportSettingsRequest {
+  enabled?: boolean;
+  frequency?: 'hourly' | 'daily' | 'weekly' | 'monthly';
+  emails?: string[];
 }
 
 // Organization API functions
@@ -67,6 +77,37 @@ export const organizationApi = {
 
   delete: async (id: string): Promise<void> => {
     await apiClient.delete(`/organizations/${id}`);
+  },
+
+  updateSummaryReport: async (
+    organizationId: string,
+    data: SummaryReportSettingsRequest
+  ): Promise<{
+    summaryReportEnabled: boolean;
+    summaryReportFrequency: string;
+    summaryReportEmails: string[];
+  }> => {
+    const response = await apiClient.patch(
+      `/organizations/${organizationId}/summary-report`,
+      data
+    );
+    return response.data;
+  },
+
+  /** One-time 7-day report (one email per domain). Optional body overrides recipients. */
+  sendSummaryReportNow: async (
+    organizationId: string,
+    body?: { emails?: string[] }
+  ): Promise<{
+    sent: number;
+    period: { start: string; end: string; label: string };
+    errors?: string[];
+  }> => {
+    const response = await apiClient.post(
+      `/organizations/${organizationId}/summary-report/send-now`,
+      body ?? {}
+    );
+    return response.data;
   },
 };
 

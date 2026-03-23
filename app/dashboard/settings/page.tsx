@@ -9,7 +9,11 @@ import { LayoutWrapper } from "@/components/ui/LayoutWrapper";
 import { Section } from "@/components/ui/Section";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { useMyOrganizations } from "@/lib/api/hooks/useOrganization";
+import {
+  useMyOrganizations,
+  useSendSummaryReportNow,
+  useUpdateSummaryReport,
+} from "@/lib/api/hooks/useOrganization";
 import { useDomainWafStatus, useToggleDomainWaf } from "@/lib/api/hooks/useDomainWaf";
 import { WAFSettingsSkeleton } from "@/components/settings/WAFSettingsSkeleton";
 import { IPBanList } from "@/components/settings/IPBanList";
@@ -38,10 +42,11 @@ export default function SettingsPage() {
   const [summaryEmails, setSummaryEmails] = useState<string[]>([]);
   const [newSummaryEmail, setNewSummaryEmail] = useState("");
   const [isSummaryEditMode, setIsSummaryEditMode] = useState(false);
-  const [savedSummarySettings, setSavedSummarySettings] = useState<SavedSummarySettings | null>(null);
 
   const { isAuthenticated } = useAuth();
   const { currentRole } = useRole();
+  const updateSummaryReport = useUpdateSummaryReport();
+  const sendReportNow = useSendSummaryReportNow();
   const router = useRouter();
 
   const { data: myOrganizations, isLoading: orgsLoading } = useMyOrganizations();
@@ -63,6 +68,10 @@ export default function SettingsPage() {
   const isLoading = orgsLoading || wafLoading;
   const hasOrganization = !!organization;
   const domains = organization?.domains || [];
+  const canManageSummary = currentRole !== "viewer";
+
+  const hasSummaryRecipients =
+    (organization?.summaryReportEmails?.length ?? 0) > 0;
 
   const getWafStatus = (domain: string): boolean => {
     if (!wafStatus) return true;
@@ -109,51 +118,85 @@ export default function SettingsPage() {
   };
 
   const handleEditSummarySettings = () => {
-    if (savedSummarySettings) {
-      setSummaryEnabled(savedSummarySettings.enabled);
-      setSummaryFrequency(savedSummarySettings.frequency);
-      setSummaryEmails(savedSummarySettings.emails);
+    if (organization) {
+      setSummaryEnabled(organization.summaryReportEnabled ?? false);
+      setSummaryFrequency(organization.summaryReportFrequency ?? "daily");
+      setSummaryEmails([...(organization.summaryReportEmails ?? [])]);
     }
     setIsSummaryEditMode(true);
   };
 
   const handleCancelSummaryEdit = () => {
     setIsSummaryEditMode(false);
-    if (savedSummarySettings) {
-      setSummaryEnabled(savedSummarySettings.enabled);
-      setSummaryFrequency(savedSummarySettings.frequency);
-      setSummaryEmails(savedSummarySettings.emails);
-    } else {
-      setSummaryEnabled(true);
-      setSummaryFrequency("daily");
-      setSummaryEmails([]);
+    if (organization) {
+      setSummaryEnabled(organization.summaryReportEnabled ?? false);
+      setSummaryFrequency(organization.summaryReportFrequency ?? "daily");
+      setSummaryEmails([...(organization.summaryReportEmails ?? [])]);
     }
   };
 
   const handleSaveSummarySettings = () => {
+    if (!organization) return;
     if (summaryEnabled && summaryEmails.length === 0) {
       toast.error("Please add at least one email address to receive reports");
       return;
     }
 
-    const settings: SavedSummarySettings = {
-      enabled: summaryEnabled,
-      frequency: summaryFrequency,
-      emails: summaryEmails,
-    };
-    setSavedSummarySettings(settings);
-    setIsSummaryEditMode(false);
-    toast.success("Summary report settings saved successfully");
+    updateSummaryReport.mutate(
+      {
+        organizationId: organization.id,
+        data: {
+          enabled: summaryEnabled,
+          frequency: summaryFrequency as "hourly" | "daily" | "weekly" | "monthly",
+          emails: summaryEmails,
+        },
+      },
+      {
+        onSuccess: () => {
+          setIsSummaryEditMode(false);
+        },
+      }
+    );
   };
 
   const handleRemoveSummarySettings = () => {
-    setSavedSummarySettings(null);
-    setIsSummaryEditMode(false);
-    setSummaryEnabled(true);
-    setSummaryFrequency("daily");
-    setSummaryEmails([]);
-    toast.success("Summary report settings removed");
+    if (!organization) return;
+    updateSummaryReport.mutate(
+      {
+        organizationId: organization.id,
+        data: {
+          enabled: false,
+          emails: [],
+        },
+      },
+      {
+        onSuccess: () => {
+          setIsSummaryEditMode(false);
+        },
+      }
+    );
   };
+
+  const handleSendReportNow = () => {
+    if (!organization) return;
+    const emails = isSummaryEditMode
+      ? summaryEmails
+      : [...(organization.summaryReportEmails ?? [])];
+    if (emails.length === 0) {
+      toast.error("Add at least one recipient email first");
+      return;
+    }
+    if (domains.length === 0) {
+      toast.error("Configure at least one domain for your organization first");
+      return;
+    }
+    sendReportNow.mutate({ organizationId: organization.id, emails });
+  };
+
+  const canSendReportNow =
+    canManageSummary &&
+    domains.length > 0 &&
+    (isSummaryEditMode ? summaryEmails.length > 0 : hasSummaryRecipients);
 
   return (
     <LayoutWrapper>
@@ -311,14 +354,22 @@ export default function SettingsPage() {
                       )}
                     </GlassCard>
 
-                    {/* Summary reports */}
-                    {savedSummarySettings && !isSummaryEditMode ? (
+                    {/* Summary reports — one HTML email per domain on each schedule */}
+                    {!isSummaryEditMode && hasSummaryRecipients ? (
                       <SummaryReportsSummary
-                        settings={savedSummarySettings}
+                        settings={{
+                          enabled: organization?.summaryReportEnabled ?? false,
+                          frequency: organization?.summaryReportFrequency ?? "daily",
+                          emails: [...(organization?.summaryReportEmails ?? [])],
+                        }}
                         onEdit={handleEditSummarySettings}
                         onRemove={handleRemoveSummarySettings}
+                        canManage={canManageSummary}
+                        onSendNow={handleSendReportNow}
+                        canSendNow={canSendReportNow}
+                        sendPending={sendReportNow.isPending}
                       />
-                    ) : !savedSummarySettings && !isSummaryEditMode ? (
+                    ) : !isSummaryEditMode && !hasSummaryRecipients ? (
                       <GlassCard className="p-6">
                         <div className="text-center py-8">
                           <div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-full bg-black/5 dark:bg-white/10">
@@ -339,12 +390,19 @@ export default function SettingsPage() {
                           <h3 className="text-lg font-semibold text-[#1d1d1f] dark:text-white mb-2">
                             No Summary Reports Configured
                           </h3>
-                          <p className="text-sm text-black/60 dark:text-white/60 mb-6">
-                            Set up summary reports to receive periodic WAF activity summaries.
+                          <p className="text-sm text-black/60 dark:text-white/60 mb-2 max-w-md mx-auto">
+                            Receive Zergaw Cloud WAF reports by email (same layout as the security
+                            digest): one message per domain, on your chosen schedule.
                           </p>
-                          <Button onClick={() => setIsSummaryEditMode(true)} variant="primary" size="md">
-                            Configure Summary Reports
-                          </Button>
+                          {canManageSummary ? (
+                            <Button onClick={() => setIsSummaryEditMode(true)} variant="primary" size="md">
+                              Configure Summary Reports
+                            </Button>
+                          ) : (
+                            <p className="text-xs text-black/50 dark:text-white/50">
+                              Ask an organization admin to configure summary reports.
+                            </p>
+                          )}
                         </div>
                       </GlassCard>
                     ) : (
@@ -355,13 +413,16 @@ export default function SettingsPage() {
                               Summary Reports
                             </h3>
                             <p className="mt-1 text-sm text-black/60 dark:text-white/60">
-                              Receive periodic summaries of WAF activity.
+                              Recipients get one email per protected domain for each period (daily /
+                              weekly / monthly / hourly), with stats and recent events. Uses your
+                              Zergaw branding logo.
                             </p>
                           </div>
 
                           <AppleSwitch
                             enabled={summaryEnabled}
                             onToggle={() => setSummaryEnabled((v) => !v)}
+                            disabled={!canManageSummary || updateSummaryReport.isPending}
                           />
                         </div>
 
@@ -389,12 +450,14 @@ export default function SettingsPage() {
                                     }
                                   }}
                                   className="flex-1"
+                                  disabled={!canManageSummary || updateSummaryReport.isPending}
                                 />
                                 <Button
                                   onClick={handleAddSummaryEmail}
                                   variant="primary"
                                   size="md"
                                   className="px-6"
+                                  disabled={!canManageSummary || updateSummaryReport.isPending}
                                 >
                                   Add
                                 </Button>
@@ -407,6 +470,7 @@ export default function SettingsPage() {
                                       key={email}
                                       email={email}
                                       onRemove={() => handleRemoveSummaryEmail(email)}
+                                      removable={canManageSummary && !updateSummaryReport.isPending}
                                     />
                                   ))}
                                 </div>
@@ -429,7 +493,8 @@ export default function SettingsPage() {
                                 <select
                                   value={summaryFrequency}
                                   onChange={(e) => setSummaryFrequency(e.target.value)}
-                                  className="w-full rounded-xl border border-black/10 bg-white/70 px-4 py-3 text-sm text-[#1d1d1f] shadow-sm outline-none backdrop-blur transition focus:border-black/20 focus:ring-2 focus:ring-black/10 dark:border-white/10 dark:bg-white/5 dark:text-white dark:focus:border-white/20 dark:focus:ring-white/10"
+                                  disabled={!canManageSummary || updateSummaryReport.isPending}
+                                  className="w-full rounded-xl border border-black/10 bg-white/70 px-4 py-3 text-sm text-[#1d1d1f] shadow-sm outline-none backdrop-blur transition focus:border-black/20 focus:ring-2 focus:ring-black/10 dark:border-white/10 dark:bg-white/5 dark:text-white dark:focus:border-white/20 dark:focus:ring-white/10 disabled:opacity-50"
                                 >
                                   <option value="hourly">Hourly</option>
                                   <option value="daily">Daily</option>
@@ -452,15 +517,37 @@ export default function SettingsPage() {
                           </div>
                         )}
 
-                        {/* Save/Cancel buttons */}
-                        <div className="mt-6 flex justify-end gap-3 border-t border-black/5 pt-6 dark:border-white/10">
-                          {savedSummarySettings && (
-                            <Button onClick={handleCancelSummaryEdit} variant="outline" size="md">
-                              Cancel
-                            </Button>
-                          )}
-                          <Button onClick={handleSaveSummarySettings} variant="primary" size="md">
-                            Save Settings
+                        {/* Save/Cancel / Send now */}
+                        <div className="mt-6 flex flex-wrap items-center justify-end gap-3 border-t border-black/5 pt-6 dark:border-white/10">
+                          <Button
+                            type="button"
+                            onClick={handleSendReportNow}
+                            variant="outline"
+                            size="md"
+                            disabled={
+                              !canSendReportNow ||
+                              sendReportNow.isPending ||
+                              updateSummaryReport.isPending
+                            }
+                            title="Sends one email per domain with WAF stats for the last 7 days (does not change your schedule)"
+                          >
+                            {sendReportNow.isPending ? "Sending…" : "Send 7-day report now"}
+                          </Button>
+                          <Button
+                            onClick={handleCancelSummaryEdit}
+                            variant="outline"
+                            size="md"
+                            disabled={updateSummaryReport.isPending || sendReportNow.isPending}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            onClick={handleSaveSummarySettings}
+                            variant="primary"
+                            size="md"
+                            disabled={!canManageSummary || updateSummaryReport.isPending || sendReportNow.isPending}
+                          >
+                            {updateSummaryReport.isPending ? "Saving…" : "Save Settings"}
                           </Button>
                         </div>
                       </GlassCard>
@@ -604,10 +691,18 @@ function SummaryReportsSummary({
   settings,
   onEdit,
   onRemove,
+  canManage = true,
+  onSendNow,
+  canSendNow = false,
+  sendPending = false,
 }: {
   settings: SavedSummarySettings;
   onEdit: () => void;
   onRemove: () => void;
+  canManage?: boolean;
+  onSendNow?: () => void;
+  canSendNow?: boolean;
+  sendPending?: boolean;
 }) {
   const getFrequencyText = () => {
     const frequencyMap: Record<string, string> = {
@@ -643,14 +738,33 @@ function SummaryReportsSummary({
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button onClick={onEdit} variant="outline" size="sm">
-              Edit
-            </Button>
-            <Button onClick={onRemove} variant="outline" size="sm" className="text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300">
-              Remove
-            </Button>
-          </div>
+          {canManage && (
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {onSendNow && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={onSendNow}
+                  disabled={!canSendNow || sendPending}
+                  title="One email per domain, last 7 days of WAF data"
+                >
+                  {sendPending ? "Sending…" : "Send 7-day report now"}
+                </Button>
+              )}
+              <Button onClick={onEdit} variant="outline" size="sm">
+                Edit
+              </Button>
+              <Button
+                onClick={onRemove}
+                variant="outline"
+                size="sm"
+                className="text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300"
+              >
+                Remove
+              </Button>
+            </div>
+          )}
         </div>
       </GlassCard>
     );
@@ -702,14 +816,33 @@ function SummaryReportsSummary({
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button onClick={onEdit} variant="outline" size="sm">
-            Edit
-          </Button>
-          <Button onClick={onRemove} variant="outline" size="sm" className="text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300">
-            Remove
-          </Button>
-        </div>
+        {canManage && (
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {onSendNow && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onSendNow}
+                disabled={!canSendNow || sendPending}
+                title="One email per domain, last 7 days of WAF data"
+              >
+                {sendPending ? "Sending…" : "Send 7-day report now"}
+              </Button>
+            )}
+            <Button onClick={onEdit} variant="outline" size="sm">
+              Edit
+            </Button>
+            <Button
+              onClick={onRemove}
+              variant="outline"
+              size="sm"
+              className="text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300"
+            >
+              Remove
+            </Button>
+          </div>
+        )}
       </div>
     </GlassCard>
   );
@@ -719,23 +852,27 @@ function SummaryReportsSummary({
 function SummaryEmailTag({
   email,
   onRemove,
+  removable = true,
 }: {
   email: string;
   onRemove: () => void;
+  removable?: boolean;
 }) {
   return (
     <span className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white/70 dark:border-white/10 dark:bg-white/5 backdrop-blur px-3 py-1.5 text-xs text-[#1d1d1f] dark:text-white">
       <span className="truncate max-w-[260px]">{email}</span>
-      <button
-        type="button"
-        onClick={onRemove}
-        className="rounded-full p-1 text-black/40 hover:text-black/70 dark:text-white/40 dark:hover:text-white/70 transition-colors"
-        aria-label={`Remove ${email}`}
-      >
-        <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
+      {removable && (
+        <button
+          type="button"
+          onClick={onRemove}
+          className="rounded-full p-1 text-black/40 hover:text-black/70 dark:text-white/40 dark:hover:text-white/70 transition-colors"
+          aria-label={`Remove ${email}`}
+        >
+          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      )}
     </span>
   );
 }
