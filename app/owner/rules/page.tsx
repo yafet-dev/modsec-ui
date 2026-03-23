@@ -19,7 +19,7 @@ import toast from "react-hot-toast";
 const ITEMS_PER_PAGE = 10;
 
 export default function OwnerRulesPage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isAuthLoading } = useAuth();
   const { currentRole } = useRole();
   const router = useRouter();
   const { data: organizations } = useOrganizations();
@@ -52,12 +52,13 @@ export default function OwnerRulesPage() {
   }, []);
 
   useEffect(() => {
+    if (isAuthLoading) return;
     if (!isAuthenticated) {
       router.push("/");
     } else if (currentRole !== "super_admin") {
       router.push("/dashboard/rules");
     }
-  }, [isAuthenticated, currentRole, router]);
+  }, [isAuthLoading, isAuthenticated, currentRole, router]);
 
   const filteredRules = useMemo(() => {
     return rules.filter((rule) => {
@@ -137,7 +138,7 @@ export default function OwnerRulesPage() {
     }
   };
 
-  if (!isAuthenticated || currentRole !== "super_admin") {
+  if (isAuthLoading || !isAuthenticated || currentRole !== "super_admin") {
     return null;
   }
 

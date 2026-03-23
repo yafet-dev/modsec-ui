@@ -49,7 +49,7 @@ const AttackMap = dynamic(
 );
 
 export default function Dashboard() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isAuthLoading } = useAuth();
   const { currentRole } = useRole();
   const router = useRouter();
   const [selectedHost, setSelectedHost] = useState("all");
@@ -68,12 +68,13 @@ export default function Dashboard() {
   }, [myOrganizations]);
 
   useEffect(() => {
+    if (isAuthLoading) return;
     if (!isAuthenticated) {
       router.push("/");
     } else if (currentRole === "super_admin") {
       router.push("/owner/dashboard");
     }
-  }, [isAuthenticated, currentRole, router]);
+  }, [isAuthLoading, isAuthenticated, currentRole, router]);
 
   useEffect(() => {
     if (
@@ -102,7 +103,7 @@ export default function Dashboard() {
     }));
   }, [activityLogsResponse]);
 
-  if (!isAuthenticated || currentRole === "super_admin") {
+  if (isAuthLoading || !isAuthenticated || currentRole === "super_admin") {
     return null;
   }
 
@@ -110,15 +111,15 @@ export default function Dashboard() {
     <LayoutWrapper>
       <main className="py-8">
         <Section>
-          <div className="mb-8 flex items-center justify-between">
-            <div>
-              <h1 className="text-4xl font-semibold text-gray-900 dark:text-white mb-2">
+          <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-gray-900 dark:text-white mb-2">
                 Dashboard
               </h1>
-              <p className="text-lg text-gray-600 dark:text-gray-400">
+              <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400">
                 Real-time security monitoring and analytics
                 {selectedHost !== "all" && (
-                  <span className="ml-2 text-blue-500">— {selectedHost}</span>
+                  <span className="ml-2 text-blue-500 break-all">— {selectedHost}</span>
                 )}
               </p>
             </div>
@@ -126,6 +127,7 @@ export default function Dashboard() {
               selectedHost={selectedHost}
               onHostChange={setSelectedHost}
               hosts={uniqueHosts}
+              className="w-full sm:w-auto shrink-0"
             />
           </div>
 
@@ -139,7 +141,7 @@ export default function Dashboard() {
           </div>
 
           <div className="mt-6">
-            <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-6">
+            <h3 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white mb-6">
               Recent Activity
             </h3>
             <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden">
@@ -158,7 +160,7 @@ export default function Dashboard() {
                       key={activity.id}
                       className="p-6 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                     >
-                      <div className="flex items-center justify-between gap-4">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                         <div className="flex items-center gap-4 min-w-0">
                           <div
                             className={`w-2 h-2 shrink-0 rounded-full ${severityDotClass(
@@ -174,7 +176,7 @@ export default function Dashboard() {
                             </p>
                           </div>
                         </div>
-                        <span className="text-sm text-gray-400 dark:text-gray-500 shrink-0">
+                        <span className="text-sm text-gray-400 dark:text-gray-500 shrink-0 sm:text-right">
                           {activity.time}
                         </span>
                       </div>

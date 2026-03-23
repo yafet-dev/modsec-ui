@@ -43,7 +43,7 @@ export default function SettingsPage() {
   const [newSummaryEmail, setNewSummaryEmail] = useState("");
   const [isSummaryEditMode, setIsSummaryEditMode] = useState(false);
 
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isAuthLoading } = useAuth();
   const { currentRole } = useRole();
   const updateSummaryReport = useUpdateSummaryReport();
   const sendReportNow = useSendSummaryReportNow();
@@ -56,14 +56,15 @@ export default function SettingsPage() {
   const toggleMutation = useToggleDomainWaf();
 
   useEffect(() => {
+    if (isAuthLoading) return;
     if (!isAuthenticated) {
       router.push("/");
     } else if (currentRole === "super_admin") {
       router.push("/owner/dashboard");
     }
-  }, [isAuthenticated, currentRole, router]);
+  }, [isAuthLoading, isAuthenticated, currentRole, router]);
 
-  if (!isAuthenticated || currentRole === "super_admin") return null;
+  if (isAuthLoading || !isAuthenticated || currentRole === "super_admin") return null;
 
   const isLoading = orgsLoading || wafLoading;
   const hasOrganization = !!organization;
@@ -593,7 +594,7 @@ function GlassCard({
   );
 }
 
-/** Apple-ish segmented tabs */
+/** Apple-ish segmented tabs — 2×2 grid on small screens so labels never crowd; pill row from `sm` up */
 function AppleSegmentedTabs({
   tabs,
   value,
@@ -604,25 +605,35 @@ function AppleSegmentedTabs({
   onChange: (v: TabKey) => void;
 }) {
   return (
-    <div className="inline-flex rounded-full border border-black/10 bg-white/60 p-1 backdrop-blur dark:border-white/10 dark:bg-white/[0.06]">
-      {tabs.map((t) => {
-        const active = t.key === value;
-        return (
-          <button
-            key={t.key}
-            onClick={() => onChange(t.key)}
-            className={[
-              "relative rounded-full px-4 py-2 text-sm font-medium transition",
-              active
-                ? "bg-white text-[#1d1d1f] shadow-sm dark:bg-white/15 dark:text-white"
-                : "text-black/60 hover:text-black dark:text-white/60 dark:hover:text-white",
-            ].join(" ")}
-            aria-current={active ? "page" : undefined}
-          >
-            {t.label}
-          </button>
-        );
-      })}
+    <div className="min-w-0">
+      <div
+        className={[
+          "rounded-2xl border border-black/10 bg-white/60 p-2 backdrop-blur dark:border-white/10 dark:bg-white/[0.06]",
+          "grid grid-cols-2 gap-2 sm:inline-flex sm:rounded-full sm:p-1 sm:gap-1",
+        ].join(" ")}
+      >
+        {tabs.map((t) => {
+          const active = t.key === value;
+          return (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => onChange(t.key)}
+              className={[
+                "relative text-sm font-medium transition",
+                "w-full rounded-xl px-3 py-3 text-center leading-snug",
+                "sm:w-auto sm:shrink-0 sm:rounded-full sm:px-4 sm:py-2 sm:leading-normal sm:whitespace-nowrap",
+                active
+                  ? "bg-white text-[#1d1d1f] shadow-sm dark:bg-white/15 dark:text-white"
+                  : "text-black/60 hover:text-black dark:text-white/60 dark:hover:text-white",
+              ].join(" ")}
+              aria-current={active ? "page" : undefined}
+            >
+              {t.label}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

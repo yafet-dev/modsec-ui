@@ -25,7 +25,7 @@ export function HostSelector({
       <select
         value={selectedHost}
         onChange={(e) => onHostChange(e.target.value)}
-        className="appearance-none bg-transparent border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-2 pr-10 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition-colors"
+        className="appearance-none bg-transparent border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-2 pr-10 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition-colors w-full min-w-0 sm:min-w-[12rem] max-w-full"
       >
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>

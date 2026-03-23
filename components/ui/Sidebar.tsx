@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { useSidebar } from "@/components/providers/SidebarProvider";
+import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 
 interface NavItem {
   name: string;
@@ -98,8 +99,12 @@ const navItems: NavItem[] = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { theme } = useTheme(); // Subscribe to theme changes for re-render
-  const { isCollapsed, setIsCollapsed } = useSidebar();
+  const { theme } = useTheme();
+  const { isCollapsed, setIsCollapsed, isMobileNavOpen, closeMobileNav } =
+    useSidebar();
+  const isLgUp = useMediaQuery("(min-width: 1024px)");
+  /** Icon rail only on large desktop; phone + tablet use Twitter-style full drawer */
+  const showCollapsed = isCollapsed && isLgUp;
   const isDark = theme === "dark";
 
   const activeClasses = isDark
@@ -111,161 +116,230 @@ export function Sidebar() {
     : "text-slate-600 hover:bg-white hover:text-slate-900 active:bg-slate-50";
 
   return (
-    <aside
-      className={`
-        flex flex-col h-screen
-        ${isCollapsed ? "w-20 px-3" : "w-72 px-6"}
-        backdrop-blur-xl
-        fixed inset-y-0 left-0 z-40
-        ${isDark ? "text-zinc-50" : "text-slate-900"}
+    <>
+      {/* Twitter-style scrim: above app chrome (header is z-50) */}
+      {isMobileNavOpen && (
+        <button
+          type="button"
+          className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-[2px] lg:hidden"
+          onClick={closeMobileNav}
+          aria-label="Close menu"
+        />
+      )}
+      <aside
+        className={`
+        flex flex-col
+        h-[100dvh] max-lg:h-[100dvh]
+        max-lg:w-[min(20rem,100vw)] max-lg:max-w-[100vw] max-lg:px-5 max-lg:shrink-0
+        ${showCollapsed ? "lg:w-20 lg:px-3" : "lg:w-72 lg:px-6"}
+        max-lg:backdrop-blur-none
+        max-lg:border-r max-lg:border-gray-200 dark:max-lg:border-gray-800
+        max-lg:bg-white dark:max-lg:bg-[#050509]
+        lg:backdrop-blur-xl
+        fixed inset-y-0 left-0
+        z-[110] lg:z-40
+        max-lg:pt-[env(safe-area-inset-top)] max-lg:pb-[env(safe-area-inset-bottom)]
+        max-lg:shadow-2xl
+        ${isMobileNavOpen ? "translate-x-0" : "-translate-x-full"}
+        lg:translate-x-0
+        max-lg:transition-transform max-lg:duration-300 max-lg:ease-out
+        ${isDark ? "text-zinc-50 lg:text-zinc-50" : "text-slate-900 lg:text-slate-900"}
         ${
           isDark
-            ? "bg-gradient-to-b from-[#050509]/98 via-[#050509]/95 to-[#050509]/98"
-            : "bg-gradient-to-b from-white/95 via-white/90 to-white/95"
+            ? "lg:bg-gradient-to-b lg:from-[#050509]/98 lg:via-[#050509]/95 lg:to-[#050509]/98"
+            : "lg:bg-gradient-to-b lg:from-white/95 lg:via-white/90 lg:to-white/95"
         }
         transition-all duration-500 ease-out
       `}
-    >
-      {/* ======= TOP SECTION ======= */}
-      <div className="flex-1 flex flex-col">
-        {/* Logo section */}
-        <div className="flex items-center justify-between pt-8 pb-4">
-          {!isCollapsed && (
-            <Link href="/dashboard" className="flex items-center justify-center w-full">
-              <img src="/Logo-blue.png" alt="Zergaw WAF" className="h-6 w-auto" />
+      >
+        <div className="flex-1 flex flex-col min-h-0">
+          {/* Phone + tablet: full logo row + close (Twitter-style sheet) */}
+          <div className="lg:hidden flex items-center justify-between gap-3 pt-4 pb-4 shrink-0">
+            <Link
+              href="/dashboard"
+              onClick={() => closeMobileNav()}
+              className="flex items-center min-w-0"
+            >
+              <img
+                src="/Logo-blue.png"
+                alt="Zergaw WAF"
+                className="h-7 w-auto"
+              />
             </Link>
-          )}
-          {isCollapsed && (
-            <Link href="/dashboard" className="flex items-center justify-center w-full">
-              <div
-                className={`
-                  w-9 h-9 rounded-[20px] flex items-center justify-center
-                  transition-all duration-500
-                  ${
-                    isDark
-                      ? "bg-white/95 text-slate-900 shadow-[0_4px_20px_rgba(255,255,255,0.1)]"
-                      : "bg-slate-900 text-white shadow-[0_4px_20px_rgba(15,23,42,0.2)]"
-                  }
-                `}
+            <button
+              type="button"
+              onClick={closeMobileNav}
+              className={`
+                shrink-0 p-2 rounded-full transition-all duration-300
+                ${
+                  isDark
+                    ? "hover:bg-white/10 active:bg-white/20 text-zinc-300"
+                    : "hover:bg-gray-100 active:bg-gray-200 text-gray-600"
+                }
+              `}
+              aria-label="Close menu"
+            >
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-                <span className="text-xs font-semibold tracking-tight">ZW</span>
-              </div>
-            </Link>
-          )}
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
 
-          {/* Collapse / reveal button */}
-          <button
-            type="button"
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className={`
-              ml-2 p-1.5 rounded-full transition-all duration-300
+          {/* Large desktop: logo / ZW + collapse toggle */}
+          <div className="hidden lg:flex items-center gap-2 pt-8 pb-4">
+            <div className="flex-1 min-w-0 flex justify-center">
+              {!showCollapsed ? (
+                <Link
+                  href="/dashboard"
+                  className="flex items-center justify-center"
+                >
+                  <img
+                    src="/Logo-blue.png"
+                    alt="Zergaw WAF"
+                    className="h-6 w-auto"
+                  />
+                </Link>
+              ) : (
+                <Link href="/dashboard" className="flex items-center justify-center">
+                  <div
+                    className={`
+                    w-9 h-9 rounded-[20px] flex items-center justify-center
+                    transition-all duration-500
+                    ${
+                      isDark
+                        ? "bg-white/95 text-slate-900 shadow-[0_4px_20px_rgba(255,255,255,0.1)]"
+                        : "bg-slate-900 text-white shadow-[0_4px_20px_rgba(15,23,42,0.2)]"
+                    }
+                  `}
+                  >
+                    <span className="text-xs font-semibold tracking-tight">ZW</span>
+                  </div>
+                </Link>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              className={`
+              shrink-0 p-1.5 rounded-full transition-all duration-300
               ${
                 isDark
                   ? "hover:bg-white/10 active:bg-white/20 text-zinc-400 hover:text-white"
                   : "hover:bg-slate-100 active:bg-slate-200 text-slate-500 hover:text-slate-700"
               }
             `}
-            aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              aria-label={showCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+              {showCollapsed ? (
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              ) : (
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+              )}
+            </button>
+          </div>
+
+          <nav
+            className={`flex flex-col space-y-2 mt-4 lg:mt-12 overflow-y-auto flex-1 min-h-0 pb-6`}
           >
-            {isCollapsed ? (
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
-            ) : (
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-            )}
-          </button>
-        </div>
+            {navItems.map((item) => {
+              const isActive = pathname === item.href;
 
-        {/* Navigation */}
-        <nav className={`flex flex-col space-y-2 mt-12`}>
-          {navItems.map((item) => {
-            const isActive = pathname === item.href;
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => closeMobileNav()}
+                  className={`
                   group flex items-center relative
-                  ${isCollapsed ? "justify-center px-0" : "pl-4 pr-3 gap-3"}
+                  ${showCollapsed ? "justify-center px-0" : "pl-4 pr-3 gap-3"}
                   w-full rounded-2xl py-3 text-sm font-medium
                   transition-all duration-300 ease-out
                   ${isActive ? activeClasses : inactiveClasses}
                   hover:scale-[1.02] active:scale-[0.98]
                 `}
-              >
-                {/* Active indicator on the RIGHT side */}
-                {isActive && !isCollapsed && (
-                  <div
-                    className={`absolute right-0 w-1 h-6 rounded-full mr-3 ${
-                      isDark
-                        ? "bg-gradient-to-b from-slate-900 to-slate-800"
-                        : "bg-gradient-to-b from-white to-slate-100"
-                    }`}
-                  />
-                )}
+                >
+                  {isActive && !showCollapsed && (
+                    <div
+                      className={`absolute right-0 w-1 h-6 rounded-full mr-3 ${
+                        isDark
+                          ? "bg-gradient-to-b from-slate-900 to-slate-800"
+                          : "bg-gradient-to-b from-white to-slate-100"
+                      }`}
+                    />
+                  )}
 
-                {/* Icon */}
-                <span
-                  className={`
+                  <span
+                    className={`
                     relative flex items-center justify-center
                     transition-all duration-300
                   `}
-                >
-                  {item.icon}
-                </span>
-
-                {!isCollapsed && (
-                  <span className="font-medium tracking-tight flex-1">
-                    {item.name}
+                  >
+                    {item.icon}
                   </span>
-                )}
 
-                {/* Tooltip for collapsed state */}
-                {isCollapsed && (
-                  <div
-                    className={`
+                  {!showCollapsed && (
+                    <span className="font-medium tracking-tight flex-1">
+                      {item.name}
+                    </span>
+                  )}
+
+                  {showCollapsed && (
+                    <div
+                      className={`
                       absolute left-full ml-3 px-2 py-1 rounded-lg text-xs font-medium
                       opacity-0 group-hover:opacity-100 pointer-events-none
-                      transition-opacity duration-200
+                      transition-opacity duration-200 z-10
                       ${
                         isDark
                           ? "bg-slate-900 text-white"
                           : "bg-white text-slate-900 shadow-lg"
                       }
                     `}
-                  >
-                    {item.name}
-                  </div>
-                )}
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
-    </aside>
+                    >
+                      {item.name}
+                    </div>
+                  )}
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+      </aside>
+    </>
   );
 }

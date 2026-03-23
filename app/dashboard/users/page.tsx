@@ -17,7 +17,7 @@ import {
 import toast from "react-hot-toast";
 
 export default function UsersPage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isAuthLoading } = useAuth();
   const { currentRole } = useRole();
   const router = useRouter();
 
@@ -32,12 +32,13 @@ export default function UsersPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   useEffect(() => {
+    if (isAuthLoading) return;
     if (!isAuthenticated) {
       router.push("/");
     } else if (currentRole === "super_admin") {
       router.push("/owner/users");
     }
-  }, [isAuthenticated, currentRole, router]);
+  }, [isAuthLoading, isAuthenticated, currentRole, router]);
 
   const handleAddUser = async (newUser: {
     email: string;
@@ -70,7 +71,7 @@ export default function UsersPage() {
     toggleDisabled.mutate(userId);
   };
 
-  if (!isAuthenticated || currentRole === "super_admin") {
+  if (isAuthLoading || !isAuthenticated || currentRole === "super_admin") {
     return null;
   }
 

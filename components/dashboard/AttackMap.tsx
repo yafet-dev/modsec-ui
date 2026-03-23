@@ -177,9 +177,9 @@ export function AttackMap({
   return (
     <div>
       {/* Header with title and stats */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+        <div className="flex items-center gap-3 flex-wrap">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
             Attack Origins
           </h3>
           {/* Live indicator */}
@@ -195,7 +195,7 @@ export function AttackMap({
         </div>
 
         {/* Severity stats inline */}
-        <div className="flex items-center gap-6">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 sm:gap-6">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-red-500"></div>
             <span className="text-sm font-semibold text-red-500">

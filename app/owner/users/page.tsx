@@ -12,7 +12,7 @@ import { useAllUsers } from "@/lib/api/hooks/useUser";
 import { useOrganizations } from "@/lib/api/hooks/useOrganization";
 
 export default function OwnerUsersPage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isAuthLoading } = useAuth();
   const { currentRole } = useRole();
   const router = useRouter();
 
@@ -22,12 +22,13 @@ export default function OwnerUsersPage() {
   const [selectedOrg, setSelectedOrg] = useState("all");
 
   useEffect(() => {
+    if (isAuthLoading) return;
     if (!isAuthenticated) {
       router.push("/");
     } else if (currentRole !== "super_admin") {
       router.push("/dashboard/users");
     }
-  }, [isAuthenticated, currentRole, router]);
+  }, [isAuthLoading, isAuthenticated, currentRole, router]);
 
   type UserStatus = "active" | "pending" | "disabled";
 
@@ -80,7 +81,7 @@ export default function OwnerUsersPage() {
     return transformedUsers.filter((u) => u.organizationId === selectedOrg);
   }, [transformedUsers, selectedOrg]);
 
-  if (!isAuthenticated || currentRole !== "super_admin") {
+  if (isAuthLoading || !isAuthenticated || currentRole !== "super_admin") {
     return null;
   }
 

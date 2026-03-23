@@ -7,16 +7,17 @@ import { HeroSection } from "@/components/layout/HeroSection";
 import { LoginForm } from "@/components/auth/LoginForm";
 
 export default function Home() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isAuthLoading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
+    if (isAuthLoading) return;
     if (isAuthenticated) {
       router.push("/dashboard");
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthLoading, isAuthenticated, router]);
 
-  if (isAuthenticated) {
+  if (isAuthLoading || isAuthenticated) {
     return null;
   }
 

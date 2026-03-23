@@ -18,7 +18,7 @@ import { useMyOrganizations } from "@/lib/api/hooks/useOrganization";
 const ITEMS_PER_PAGE = 10;
 
 export default function LogsPage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isAuthLoading } = useAuth();
   const { currentRole } = useRole();
   const router = useRouter();
   const { data: myOrganizations } = useMyOrganizations();
@@ -32,12 +32,13 @@ export default function LogsPage() {
   const [selectedLog, setSelectedLog] = useState<LogEntry | null>(null);
 
   useEffect(() => {
+    if (isAuthLoading) return;
     if (!isAuthenticated) {
       router.push("/");
     } else if (currentRole === "super_admin") {
       router.push("/owner/logs");
     }
-  }, [isAuthenticated, currentRole, router]);
+  }, [isAuthLoading, isAuthenticated, currentRole, router]);
 
   // Extract unique hosts from organizations and current logs
   const uniqueHosts = useMemo(() => {
@@ -96,7 +97,7 @@ export default function LogsPage() {
   // Stats based on current page logs (could be enhanced to get all stats from API)
   const stats = useMemo(() => getLogStats(logs), [logs]);
 
-  if (!isAuthenticated || currentRole === "super_admin") {
+  if (isAuthLoading || !isAuthenticated || currentRole === "super_admin") {
     return null;
   }
 
@@ -104,12 +105,12 @@ export default function LogsPage() {
     <LayoutWrapper>
       <main className="py-8">
         <Section>
-          <div className="mb-8 flex items-center justify-between">
-            <div>
-              <h1 className="text-4xl font-semibold text-gray-900 dark:text-white mb-2">
+          <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-gray-900 dark:text-white mb-2">
                 Logs
               </h1>
-              <p className="text-lg text-gray-600 dark:text-gray-400">
+              <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400">
                 View and analyze WAF event logs
               </p>
             </div>
@@ -117,6 +118,7 @@ export default function LogsPage() {
               selectedHost={selectedHost}
               onHostChange={setSelectedHost}
               hosts={uniqueHosts}
+              className="w-full sm:w-auto shrink-0"
             />
           </div>
 
@@ -172,15 +174,17 @@ export default function LogsPage() {
               <LogsTable logs={logs} onSelectLog={setSelectedLog} />
 
               {/* Pagination */}
-              <div className="mt-6 flex items-center justify-between">
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+              <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-gray-500 dark:text-gray-400 text-center sm:text-left order-2 sm:order-1">
                   Showing {logs.length} of {totalLogs} logs
                 </p>
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  onPageChange={setCurrentPage}
-                />
+                <div className="order-1 sm:order-2 flex justify-center sm:justify-end w-full sm:w-auto">
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                  />
+                </div>
               </div>
             </>
           )}

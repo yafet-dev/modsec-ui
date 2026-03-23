@@ -18,17 +18,18 @@ const AttackMap = dynamic(
 );
 
 export default function OwnerDashboard() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isAuthLoading } = useAuth();
   const { currentRole } = useRole();
   const router = useRouter();
 
   useEffect(() => {
+    if (isAuthLoading) return;
     if (!isAuthenticated) {
       router.push("/");
     } else if (currentRole !== "super_admin") {
       router.push("/dashboard");
     }
-  }, [isAuthenticated, currentRole, router]);
+  }, [isAuthLoading, isAuthenticated, currentRole, router]);
 
   // Fetch recent logs for all organizations (no filters)
   const { data: logsResponse, isLoading: isLoadingLogs } = useLogs({
@@ -69,7 +70,7 @@ export default function OwnerDashboard() {
     });
   }, [logsResponse?.logs]);
 
-  if (!isAuthenticated || currentRole !== "super_admin") {
+  if (isAuthLoading || !isAuthenticated || currentRole !== "super_admin") {
     return null;
   }
 
@@ -87,7 +88,7 @@ export default function OwnerDashboard() {
           </div>
 
           <div className="mt-6">
-            <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-6">
+            <h3 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white mb-6">
               Recent Activity
             </h3>
             {isLoadingLogs ? (
@@ -105,8 +106,8 @@ export default function OwnerDashboard() {
                         key={index}
                         className="p-6 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                       >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                          <div className="flex items-center gap-4 min-w-0">
                             <div
                               className={`w-2 h-2 rounded-full ${
                                 activity.severity === "high" ||
@@ -117,8 +118,8 @@ export default function OwnerDashboard() {
                                   : "bg-yellow-500"
                               }`}
                             ></div>
-                            <div>
-                              <p className="font-medium text-gray-900 dark:text-white">
+                            <div className="min-w-0">
+                              <p className="font-medium text-gray-900 dark:text-white truncate">
                                 {activity.event}
                               </p>
                               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -126,7 +127,7 @@ export default function OwnerDashboard() {
                               </p>
                             </div>
                           </div>
-                          <span className="text-sm text-gray-400 dark:text-gray-500">
+                          <span className="text-sm text-gray-400 dark:text-gray-500 shrink-0 sm:text-right">
                             {activity.time}
                           </span>
                         </div>

@@ -17,7 +17,7 @@ import toast from "react-hot-toast";
 const ITEMS_PER_PAGE = 10;
 
 export default function RulesPage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isAuthLoading } = useAuth();
   const { currentRole } = useRole();
   const router = useRouter();
 
@@ -51,6 +51,7 @@ export default function RulesPage() {
   }, []);
 
   useEffect(() => {
+    if (isAuthLoading) return;
     if (!isAuthenticated) {
       router.push("/");
     } else if (currentRole === "super_admin") {
@@ -59,7 +60,7 @@ export default function RulesPage() {
       // Rules page is only available for super_admin, redirect regular admins to dashboard
       router.push("/dashboard");
     }
-  }, [isAuthenticated, currentRole, router]);
+  }, [isAuthLoading, isAuthenticated, currentRole, router]);
 
   // Filter rules
   const filteredRules = useMemo(() => {
@@ -146,7 +147,7 @@ export default function RulesPage() {
     }
   };
 
-  if (!isAuthenticated || currentRole === "super_admin") {
+  if (isAuthLoading || !isAuthenticated || currentRole === "super_admin") {
     return null;
   }
 

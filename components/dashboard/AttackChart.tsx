@@ -208,10 +208,10 @@ export function AttackChart({ hostId = "all" }: AttackChartProps) {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 sm:p-6 overflow-x-auto">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between mb-4 sm:mb-6">
+        <div className="min-w-0">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-1">
             Attack Trends
           </h3>
           <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -221,7 +221,8 @@ export function AttackChart({ hostId = "all" }: AttackChartProps) {
         <TimeFilter selected={timeRange} onChange={setTimeRange} />
       </div>
 
-      <ResponsiveContainer width="100%" height={300}>
+      <div className="w-full min-h-[240px] sm:min-h-[300px]">
+        <ResponsiveContainer width="100%" height={300}>
         <AreaChart data={data}>
           <defs>
             <linearGradient id="colorAttacks" x1="0" y1="0" x2="0" y2="1">
@@ -279,8 +280,9 @@ export function AttackChart({ hostId = "all" }: AttackChartProps) {
           />
         </AreaChart>
       </ResponsiveContainer>
+      </div>
 
-      <div className="mt-4 flex gap-6 text-sm">
+      <div className="mt-4 flex flex-wrap gap-4 sm:gap-6 text-sm">
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-red-500"></div>
           <span className="text-gray-600 dark:text-gray-400">

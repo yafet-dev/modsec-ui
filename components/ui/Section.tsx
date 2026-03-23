@@ -8,7 +8,7 @@ interface SectionProps {
 
 export function Section({ children, className = "", container = true }: SectionProps) {
   const content = container ? (
-    <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 lg:px-12">
       {children}
     </div>
   ) : (

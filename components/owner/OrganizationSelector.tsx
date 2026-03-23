@@ -23,7 +23,7 @@ export function OrganizationSelector({
       <select
         value={selectedOrg}
         onChange={(e) => onOrgChange(e.target.value)}
-        className="appearance-none bg-transparent border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-2 pr-10 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition-colors min-w-[200px]"
+        className="w-full min-w-0 sm:min-w-[200px] appearance-none bg-transparent border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-2 pr-10 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition-colors"
       >
         {allOrgs.map((org) => (
           <option key={org.id} value={org.id}>

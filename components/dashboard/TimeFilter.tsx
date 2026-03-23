@@ -16,13 +16,13 @@ const timeRanges: { value: TimeRange; label: string }[] = [
 
 export function TimeFilter({ selected, onChange }: TimeFilterProps) {
   return (
-    <div className="flex gap-2 p-1 bg-gray-100 dark:bg-gray-800 rounded-lg">
+    <div className="flex flex-wrap gap-1.5 sm:gap-2 p-1 bg-gray-100 dark:bg-gray-800 rounded-lg w-full sm:w-auto">
       {timeRanges.map((range) => (
         <button
           key={range.value}
           onClick={() => onChange(range.value)}
           className={`
-            px-4 py-2 rounded-md text-sm font-medium transition-all duration-200
+            flex-1 min-w-[4.5rem] sm:flex-initial sm:min-w-0 px-2 sm:px-4 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200
             ${
               selected === range.value
                 ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"

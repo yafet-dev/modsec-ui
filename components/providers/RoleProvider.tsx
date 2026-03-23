@@ -1,6 +1,12 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useLayoutEffect,
+  ReactNode,
+} from "react";
 import { useAuth } from "./AuthProvider";
 
 export type AppRole = "admin" | "super_admin" | "viewer";
@@ -18,7 +24,8 @@ export function RoleProvider({ children }: { children: ReactNode }) {
     (user?.role as AppRole | null) || null
   );
 
-  useEffect(() => {
+  // useLayoutEffect so role is synced before child useEffect redirects (avoids / ↔ /dashboard flicker)
+  useLayoutEffect(() => {
     setCurrentRole((user?.role as AppRole | null) || null);
   }, [user?.role]);
 

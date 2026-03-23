@@ -19,7 +19,7 @@ import {
 } from "@/lib/api/hooks/useOrganization";
 
 export default function OrganizationsPage() {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, isAuthLoading, user } = useAuth();
   const { currentRole } = useRole();
   const router = useRouter();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -32,12 +32,13 @@ export default function OrganizationsPage() {
   const deleteOrganization = useDeleteOrganization();
 
   useEffect(() => {
+    if (isAuthLoading) return;
     if (!isAuthenticated) {
       router.push("/");
     } else if (currentRole !== "super_admin") {
       router.push("/dashboard");
     }
-  }, [isAuthenticated, currentRole, router]);
+  }, [isAuthLoading, isAuthenticated, currentRole, router]);
 
   const handleAddOrganization = (newOrg: {
     name: string;
@@ -100,7 +101,7 @@ export default function OrganizationsPage() {
     });
   };
 
-  if (!isAuthenticated || currentRole !== "super_admin") {
+  if (isAuthLoading || !isAuthenticated || currentRole !== "super_admin") {
     return null;
   }
 

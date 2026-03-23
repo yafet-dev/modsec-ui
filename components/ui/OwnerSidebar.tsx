@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "@/components/providers/ThemeProvider";
+import { useSidebar } from "@/components/providers/SidebarProvider";
 
 interface NavItem {
   name: string;
@@ -111,26 +112,75 @@ const ownerNavItems: NavItem[] = [
 export function OwnerSidebar() {
   const pathname = usePathname();
   useTheme();
+  const { isMobileNavOpen, closeMobileNav } = useSidebar();
 
   return (
-    <aside className="w-64 h-screen bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 fixed left-0 top-0 flex flex-col">
-      <div className="p-6 border-b border-gray-200 dark:border-gray-800">
-        <img
-          src="/Logo-blue.png"
-          alt="Zergaw WAF"
-          className="h-8 w-auto mb-2"
+    <>
+      {isMobileNavOpen && (
+        <button
+          type="button"
+          className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-[2px] lg:hidden"
+          onClick={closeMobileNav}
+          aria-label="Close menu"
         />
-        <p className="text-xs text-blue-600 dark:text-blue-400">Owner Portal</p>
-      </div>
+      )}
+      <aside
+        className={`
+        w-64 h-[100dvh] max-lg:w-[min(20rem,100vw)] max-lg:max-w-[100vw]
+        bg-white dark:bg-gray-900
+        max-lg:border-r max-lg:border-gray-200 dark:max-lg:border-gray-800
+        fixed left-0 top-0 flex flex-col
+        z-[110] lg:z-40
+        max-lg:pt-[env(safe-area-inset-top)] max-lg:pb-[env(safe-area-inset-bottom)]
+        max-lg:shadow-2xl
+        ${isMobileNavOpen ? "translate-x-0" : "-translate-x-full"}
+        lg:translate-x-0
+        lg:border-r lg:border-gray-200 lg:dark:border-gray-800
+        max-lg:transition-transform max-lg:duration-300 max-lg:ease-out
+      `}
+      >
+        <div className="p-4 lg:p-6 border-b border-gray-200 dark:border-gray-800 flex items-start justify-between gap-3 shrink-0">
+          <div className="min-w-0">
+            <img
+              src="/Logo-blue.png"
+              alt="Zergaw WAF"
+              className="h-8 w-auto mb-2"
+            />
+            <p className="text-xs text-blue-600 dark:text-blue-400">
+              Owner Portal
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={closeMobileNav}
+            className="lg:hidden shrink-0 p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
+            aria-label="Close menu"
+          >
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
 
-      <nav className="flex-1 p-4 space-y-1">
-        {ownerNavItems.map((item) => {
-          const isActive = pathname === item.href;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto min-h-0 custom-scroll scroll-light dark:scroll-dark">
+          {ownerNavItems.map((item) => {
+            const isActive = pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => closeMobileNav()}
+                className={`
                 flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200
                 ${
                   isActive
@@ -138,13 +188,14 @@ export function OwnerSidebar() {
                     : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50"
                 }
               `}
-            >
-              {item.icon}
-              <span>{item.name}</span>
-            </Link>
-          );
-        })}
-      </nav>
-    </aside>
+              >
+                {item.icon}
+                <span>{item.name}</span>
+              </Link>
+            );
+          })}
+        </nav>
+      </aside>
+    </>
   );
 }

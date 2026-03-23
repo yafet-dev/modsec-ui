@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import {
   authApi,
@@ -65,22 +65,7 @@ export function useLogout() {
   });
 }
 
-// Get current user
-export function useGetMe() {
-  const authData =
-    typeof window !== "undefined"
-      ? localStorage.getItem("modsecurity_auth")
-      : null;
-  const isAuthenticated = !!authData;
-
-  return useQuery({
-    queryKey: ["auth", "me"],
-    queryFn: () => authApi.getMe(),
-    enabled: isAuthenticated,
-    retry: false,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-}
+/** Session user is loaded via AuthProvider (`useQuery` key `["auth","me"]`). */
 
 // Forgot password mutation
 export function useForgotPassword() {
