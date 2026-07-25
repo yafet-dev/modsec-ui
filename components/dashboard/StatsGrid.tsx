@@ -9,7 +9,11 @@ import { StatsGridSkeleton } from "@/components/ui/Skeleton";
 interface Stat {
   title: string;
   value: string;
-  change: string;
+  /**
+   * Drives the icon colour. Every stat is currently "neutral" because no
+   * period-over-period comparison is computed yet; wire that up before using
+   * "up"/"down".
+   */
   trend: "up" | "down" | "neutral";
   icon: React.ReactNode;
 }
@@ -127,13 +131,10 @@ export function StatsGrid({ hostId = "all" }: StatsGridProps) {
       return Math.round(num).toLocaleString();
     };
 
-    // For now, percentage change is set to "Stable" - can be enhanced later
-    // to compare with previous period
     return [
       {
         title: "Total Requests",
         value: formatValue(totalRequests),
-        change: "Stable",
         trend: "neutral" as Stat["trend"],
         icon: (
           <svg
@@ -154,7 +155,6 @@ export function StatsGrid({ hostId = "all" }: StatsGridProps) {
       {
         title: "Blocked Attacks",
         value: formatValue(blockedAttacks),
-        change: "Stable",
         trend: "neutral" as Stat["trend"],
         icon: (
           <svg
@@ -175,7 +175,6 @@ export function StatsGrid({ hostId = "all" }: StatsGridProps) {
       {
         title: "Threat Level",
         value: threatLevel,
-        change: "Stable",
         trend: "neutral" as Stat["trend"],
         icon: (
           <svg
@@ -189,27 +188,6 @@ export function StatsGrid({ hostId = "all" }: StatsGridProps) {
               strokeLinejoin="round"
               strokeWidth={2}
               d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-            />
-          </svg>
-        ),
-      },
-      {
-        title: "Active Rules",
-        value: "45", // Keep fake for now as requested
-        change: "Stable",
-        trend: "neutral" as Stat["trend"],
-        icon: (
-          <svg
-            className="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
             />
           </svg>
         ),
@@ -249,13 +227,13 @@ export function StatsGrid({ hostId = "all" }: StatsGridProps) {
       {isLoading ? (
         <StatsGridSkeleton />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {stats.map((stat, index) => (
           <div
             key={index}
             className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-6 hover:shadow-lg transition-all duration-200"
           >
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center mb-4">
               <div
                 className={`p-3 rounded-xl ${
                   stat.title === "Threat Level"
@@ -273,17 +251,6 @@ export function StatsGrid({ hostId = "all" }: StatsGridProps) {
               >
                 {stat.icon}
               </div>
-              <span
-                className={`text-sm font-medium ${
-                  stat.trend === "up"
-                    ? "text-red-600 dark:text-red-400"
-                    : stat.trend === "down"
-                    ? "text-green-600 dark:text-green-400"
-                    : "text-gray-500 dark:text-gray-400"
-                }`}
-              >
-                {stat.change}
-              </span>
             </div>
             <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
               {stat.title}

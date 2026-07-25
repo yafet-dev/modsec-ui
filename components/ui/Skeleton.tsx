@@ -47,9 +47,8 @@ export function Skeleton({
 export function StatsCardSkeleton() {
   return (
     <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-6">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center mb-4">
         <Skeleton variant="circular" width={48} height={48} />
-        <Skeleton variant="text" width={60} height={20} />
       </div>
       <Skeleton variant="text" width={120} height={16} className="mb-2" />
       <Skeleton variant="text" width={80} height={36} />
@@ -58,9 +57,11 @@ export function StatsCardSkeleton() {
 }
 
 export function StatsGridSkeleton() {
+  // Three cards, matching StatsGrid: Total Requests, Blocked Attacks,
+  // Threat Level.
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      {[...Array(4)].map((_, i) => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {[...Array(3)].map((_, i) => (
         <StatsCardSkeleton key={i} />
       ))}
     </div>
