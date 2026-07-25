@@ -13,7 +13,6 @@ import { LogsFilters } from "@/components/logs/LogsFilters";
 import { LogDetailPanel } from "@/components/logs/LogDetailPanel";
 import { getLogStats, type LogEntry } from "@/data/logs";
 import { useLogs, useLogHosts } from "@/lib/api/hooks/useLogs";
-import { useMyOrganizations } from "@/lib/api/hooks/useOrganization";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -21,7 +20,6 @@ export default function LogsPage() {
   const { isAuthenticated, isAuthLoading } = useAuth();
   const { currentRole } = useRole();
   const router = useRouter();
-  const { data: myOrganizations } = useMyOrganizations();
   const { data: logHostsResponse } = useLogHosts();
 
   // Filter states
@@ -42,32 +40,31 @@ export default function LogsPage() {
   }, [isAuthLoading, isAuthenticated, currentRole, router]);
 
   /**
-   * Hosts offered in the selector.
+   * Hosts offered in the selector, taken from the hosts that actually appear
+   * in the logs rather than the organization's registered domains.
    *
-   * Built from the hosts that actually appear in the logs, plus the
-   * organization's registered domains. Registered domains are apex names
-   * (gnzabe.com) while traffic arrives on subdomains (apiprod.gnzabe.com) --
-   * listing only the registered domains meant the subdomain you actually
-   * wanted could never be selected, and picking the apex matched every
-   * subdomain under it, so the filter looked like it did nothing.
+   * Registered domains are apex names (gnzabe.com) while traffic arrives on
+   * subdomains (apidev.gnzabe.com, apiprod.gnzabe.com). Listing only the
+   * registered domains meant the host you actually wanted could never be
+   * picked. Listing them alongside real hosts is no better: selecting a host
+   * now matches that host exactly, so an apex with no traffic of its own would
+   * return nothing and look broken.
    *
-   * The apex entries are kept so a domain with no traffic yet still appears.
+   * Every option here corresponds to real rows, and carries its count.
    */
   const uniqueHosts = useMemo(() => {
-    const hostsSet = new Set<string>();
+    const seen = new Map<string, number>();
 
-    logHostsResponse?.hosts.forEach(({ host }) => {
-      if (host?.trim()) hostsSet.add(host.trim().toLowerCase());
+    logHostsResponse?.hosts.forEach(({ host, count }) => {
+      const normalized = host?.trim().toLowerCase();
+      if (!normalized) return;
+      seen.set(normalized, (seen.get(normalized) ?? 0) + count);
     });
 
-    myOrganizations?.forEach((org) => {
-      org.domains.forEach((domain) => {
-        if (domain?.trim()) hostsSet.add(domain.trim().toLowerCase());
-      });
-    });
-
-    return Array.from(hostsSet).sort();
-  }, [logHostsResponse, myOrganizations]);
+    return Array.from(seen, ([host, count]) => ({ host, count })).sort((a, b) =>
+      a.host.localeCompare(b.host)
+    );
+  }, [logHostsResponse]);
 
   // Build API params
   const apiParams = useMemo(() => {
@@ -106,6 +103,18 @@ export default function LogsPage() {
   useEffect(() => {
     setCurrentPage(1);
   }, [selectedHost, searchQuery, severityFilter, actionFilter]);
+
+  // Drop a selection that no longer exists, so the page cannot sit on a host
+  // with no rows and look empty.
+  useEffect(() => {
+    if (
+      selectedHost !== "all" &&
+      uniqueHosts.length > 0 &&
+      !uniqueHosts.some((h) => h.host === selectedHost)
+    ) {
+      setSelectedHost("all");
+    }
+  }, [uniqueHosts, selectedHost]);
 
   // Stats based on current page logs (could be enhanced to get all stats from API)
   const stats = useMemo(() => getLogStats(logs), [logs]);

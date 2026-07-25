@@ -10,7 +10,6 @@ import { Section } from "@/components/ui/Section";
 import { HostSelector } from "@/components/ui/HostSelector";
 import { StatsGrid } from "@/components/dashboard/StatsGrid";
 import { AttackChart } from "@/components/dashboard/AttackChart";
-import { useMyOrganizations } from "@/lib/api/hooks/useOrganization";
 import { useLogs, useLogHosts } from "@/lib/api/hooks/useLogs";
 import type { LogSeverity } from "@/data/logs";
 
@@ -53,29 +52,25 @@ export default function Dashboard() {
   const { currentRole } = useRole();
   const router = useRouter();
   const [selectedHost, setSelectedHost] = useState("all");
-  const { data: myOrganizations } = useMyOrganizations();
 
-  // Hosts seen in the logs plus the organization's registered domains.
-  // Registered domains are apex names (gnzabe.com) while traffic arrives on
-  // subdomains (apiprod.gnzabe.com), so listing only the former makes the
-  // subdomain unselectable. See the logs page for the full explanation.
+  // Hosts that actually appear in the logs. Selecting one matches that host
+  // exactly, so only hosts with real rows are offered -- see the logs page for
+  // the full explanation.
   const { data: logHostsResponse } = useLogHosts();
 
   const uniqueHosts = useMemo(() => {
-    const hostsSet = new Set<string>();
+    const seen = new Map<string, number>();
 
-    logHostsResponse?.hosts.forEach(({ host }) => {
-      if (host?.trim()) hostsSet.add(host.trim().toLowerCase());
+    logHostsResponse?.hosts.forEach(({ host, count }) => {
+      const normalized = host?.trim().toLowerCase();
+      if (!normalized) return;
+      seen.set(normalized, (seen.get(normalized) ?? 0) + count);
     });
 
-    myOrganizations?.forEach((org) => {
-      org.domains.forEach((domain) => {
-        if (domain?.trim()) hostsSet.add(domain.trim().toLowerCase());
-      });
-    });
-
-    return Array.from(hostsSet).sort();
-  }, [logHostsResponse, myOrganizations]);
+    return Array.from(seen, ([host, count]) => ({ host, count })).sort((a, b) =>
+      a.host.localeCompare(b.host)
+    );
+  }, [logHostsResponse]);
 
   useEffect(() => {
     if (isAuthLoading) return;
@@ -86,11 +81,13 @@ export default function Dashboard() {
     }
   }, [isAuthLoading, isAuthenticated, currentRole, router]);
 
+  // Drop a selection that no longer exists, so the page cannot sit on a host
+  // with no rows and look empty.
   useEffect(() => {
     if (
       selectedHost !== "all" &&
       uniqueHosts.length > 0 &&
-      !uniqueHosts.includes(selectedHost)
+      !uniqueHosts.some((h) => h.host === selectedHost)
     ) {
       setSelectedHost("all");
     }

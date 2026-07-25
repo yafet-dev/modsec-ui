@@ -2,11 +2,17 @@
 
 import { hostsData } from "@/data/hosts";
 
+/** A host option, optionally carrying how many logs it has. */
+export type HostOption = string | { host: string; count?: number };
+
 interface HostSelectorProps {
   selectedHost: string;
   onHostChange: (hostId: string) => void;
-  /** When provided, options are "all" + these hosts (e.g. from org domains). Otherwise uses static hostsData. */
-  hosts?: string[];
+  /**
+   * When provided, options are "all" + these hosts. Pass objects to show a log
+   * count beside each host. Otherwise uses static hostsData.
+   */
+  hosts?: HostOption[];
   className?: string;
 }
 
@@ -17,7 +23,21 @@ export function HostSelector({
   className = "",
 }: HostSelectorProps) {
   const options = hosts != null
-    ? [{ value: "all", label: "All hosts" }, ...hosts.map((h) => ({ value: h, label: h }))]
+    ? [
+        { value: "all", label: "All hosts" },
+        ...hosts.map((entry) => {
+          const host = typeof entry === "string" ? entry : entry.host;
+          const count = typeof entry === "string" ? undefined : entry.count;
+
+          // Selecting a host shows only that host, so the count tells you
+          // up front how many rows to expect.
+          return {
+            value: host,
+            label:
+              count != null ? `${host} (${count.toLocaleString()})` : host,
+          };
+        }),
+      ]
     : hostsData.map((h) => ({ value: h.id, label: h.domain }));
 
   return (
