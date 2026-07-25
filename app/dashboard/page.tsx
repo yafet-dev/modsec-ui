@@ -11,7 +11,7 @@ import { HostSelector } from "@/components/ui/HostSelector";
 import { StatsGrid } from "@/components/dashboard/StatsGrid";
 import { AttackChart } from "@/components/dashboard/AttackChart";
 import { useMyOrganizations } from "@/lib/api/hooks/useOrganization";
-import { useLogs } from "@/lib/api/hooks/useLogs";
+import { useLogs, useLogHosts } from "@/lib/api/hooks/useLogs";
 import type { LogSeverity } from "@/data/logs";
 
 function formatRelativeTime(iso: string): string {
@@ -55,17 +55,27 @@ export default function Dashboard() {
   const [selectedHost, setSelectedHost] = useState("all");
   const { data: myOrganizations } = useMyOrganizations();
 
+  // Hosts seen in the logs plus the organization's registered domains.
+  // Registered domains are apex names (gnzabe.com) while traffic arrives on
+  // subdomains (apiprod.gnzabe.com), so listing only the former makes the
+  // subdomain unselectable. See the logs page for the full explanation.
+  const { data: logHostsResponse } = useLogHosts();
+
   const uniqueHosts = useMemo(() => {
     const hostsSet = new Set<string>();
-    if (myOrganizations) {
-      myOrganizations.forEach((org) => {
-        org.domains.forEach((domain) => {
-          hostsSet.add(domain);
-        });
+
+    logHostsResponse?.hosts.forEach(({ host }) => {
+      if (host?.trim()) hostsSet.add(host.trim().toLowerCase());
+    });
+
+    myOrganizations?.forEach((org) => {
+      org.domains.forEach((domain) => {
+        if (domain?.trim()) hostsSet.add(domain.trim().toLowerCase());
       });
-    }
+    });
+
     return Array.from(hostsSet).sort();
-  }, [myOrganizations]);
+  }, [logHostsResponse, myOrganizations]);
 
   useEffect(() => {
     if (isAuthLoading) return;

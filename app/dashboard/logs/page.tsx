@@ -12,7 +12,7 @@ import { LogsTable } from "@/components/logs/LogsTable";
 import { LogsFilters } from "@/components/logs/LogsFilters";
 import { LogDetailPanel } from "@/components/logs/LogDetailPanel";
 import { getLogStats, type LogEntry } from "@/data/logs";
-import { useLogs } from "@/lib/api/hooks/useLogs";
+import { useLogs, useLogHosts } from "@/lib/api/hooks/useLogs";
 import { useMyOrganizations } from "@/lib/api/hooks/useOrganization";
 
 const ITEMS_PER_PAGE = 10;
@@ -22,6 +22,7 @@ export default function LogsPage() {
   const { currentRole } = useRole();
   const router = useRouter();
   const { data: myOrganizations } = useMyOrganizations();
+  const { data: logHostsResponse } = useLogHosts();
 
   // Filter states
   const [selectedHost, setSelectedHost] = useState("all");
@@ -40,21 +41,33 @@ export default function LogsPage() {
     }
   }, [isAuthLoading, isAuthenticated, currentRole, router]);
 
-  // Extract unique hosts from organizations and current logs
+  /**
+   * Hosts offered in the selector.
+   *
+   * Built from the hosts that actually appear in the logs, plus the
+   * organization's registered domains. Registered domains are apex names
+   * (gnzabe.com) while traffic arrives on subdomains (apiprod.gnzabe.com) --
+   * listing only the registered domains meant the subdomain you actually
+   * wanted could never be selected, and picking the apex matched every
+   * subdomain under it, so the filter looked like it did nothing.
+   *
+   * The apex entries are kept so a domain with no traffic yet still appears.
+   */
   const uniqueHosts = useMemo(() => {
     const hostsSet = new Set<string>();
-    
-    // Add domains from user's organizations
-    if (myOrganizations) {
-      myOrganizations.forEach((org) => {
-        org.domains.forEach((domain) => {
-          hostsSet.add(domain);
-        });
+
+    logHostsResponse?.hosts.forEach(({ host }) => {
+      if (host?.trim()) hostsSet.add(host.trim().toLowerCase());
+    });
+
+    myOrganizations?.forEach((org) => {
+      org.domains.forEach((domain) => {
+        if (domain?.trim()) hostsSet.add(domain.trim().toLowerCase());
       });
-    }
-    
+    });
+
     return Array.from(hostsSet).sort();
-  }, [myOrganizations]);
+  }, [logHostsResponse, myOrganizations]);
 
   // Build API params
   const apiParams = useMemo(() => {

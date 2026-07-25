@@ -36,6 +36,15 @@ export interface GetAttackOriginsParams {
   limit?: number;
 }
 
+export interface LogHost {
+  host: string;
+  count: number;
+}
+
+export interface LogHostsResponse {
+  hosts: LogHost[];
+}
+
 // Logs API functions
 export const logsApi = {
   getAll: async (params?: GetLogsParams): Promise<LogsResponse> => {
@@ -57,6 +66,24 @@ export const logsApi = {
 
   getById: async (id: string): Promise<LogEntry> => {
     const response = await apiClient.get<LogEntry>(`/logs/${id}`);
+    return response.data;
+  },
+
+  /**
+   * Hosts that actually appear in the caller's logs, most frequent first.
+   *
+   * The organization's registered domains are apex names (gnzabe.com) while
+   * traffic arrives on subdomains (apiprod.gnzabe.com), so a selector built
+   * only from registered domains cannot target the host you want.
+   */
+  getHosts: async (organizationId?: string): Promise<LogHostsResponse> => {
+    const queryParams = new URLSearchParams();
+    if (organizationId) queryParams.append('organizationId', organizationId);
+
+    const queryString = queryParams.toString();
+    const response = await apiClient.get<LogHostsResponse>(
+      `/logs/hosts${queryString ? `?${queryString}` : ''}`
+    );
     return response.data;
   },
 

@@ -23,6 +23,16 @@ export function useLog(id: string | null) {
   });
 }
 
+// Get the hosts that actually appear in the caller's logs
+export function useLogHosts(organizationId?: string) {
+  return useQuery({
+    queryKey: ['log-hosts', organizationId],
+    queryFn: () => logsApi.getHosts(organizationId),
+    // Hosts change far less often than individual log lines.
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
 // Get attack origins
 export function useAttackOrigins(params?: GetAttackOriginsParams) {
   return useQuery({
