@@ -5,7 +5,23 @@ import axios, {
 } from "axios";
 import { authApi } from "./auth";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+
+const PUBLIC_ENDPOINTS = new Set([
+  "/auth/login",
+  "/auth/forgot-password",
+  "/auth/reset-password",
+  "/auth/refresh",
+  "/invitations/validate",
+  "/invitations/accept",
+]);
+
+function isPublicEndpoint(url?: string): boolean {
+  if (!url) return false;
+
+  const path = url.split("?", 1)[0].replace(/^\/api/, "");
+  return PUBLIC_ENDPOINTS.has(path);
+}
 
 // Create axios instance
 export const apiClient: AxiosInstance = axios.create({
@@ -18,8 +34,8 @@ export const apiClient: AxiosInstance = axios.create({
 // Flag to prevent multiple simultaneous refresh requests
 let isRefreshing = false;
 let failedQueue: Array<{
-  resolve: (value?: any) => void;
-  reject: (reason?: any) => void;
+  resolve: (value: string | null) => void;
+  reject: (reason?: unknown) => void;
 }> = [];
 
 const processQueue = (
@@ -83,8 +99,9 @@ const refreshToken = async (): Promise<string | null> => {
 // Request interceptor to add auth token and refresh if needed
 apiClient.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
-    // Skip adding auth header for refresh token endpoint
-    if (config.url?.includes("/auth/refresh")) {
+    // Public authentication actions must never depend on a stored session.
+    if (isPublicEndpoint(config.url)) {
+      config.headers.delete("Authorization");
       return config;
     }
 
@@ -118,7 +135,7 @@ apiClient.interceptors.request.use(
             }
           } else {
             // Wait for ongoing refresh
-            await new Promise((resolve) => {
+            await new Promise<string | null>((resolve) => {
               failedQueue.push({ resolve, reject: () => {} });
             });
             // Get the updated token
@@ -152,8 +169,8 @@ apiClient.interceptors.response.use(
       _retry?: boolean;
     };
 
-    // Skip refresh logic for refresh endpoint itself
-    if (originalRequest.url?.includes("/auth/refresh")) {
+    // A 401 from a public endpoint is its own response, not a signal to refresh.
+    if (isPublicEndpoint(originalRequest.url)) {
       return Promise.reject(error);
     }
 
@@ -161,7 +178,7 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       // If we're already refreshing, wait for it
       if (isRefreshing) {
-        return new Promise((resolve, reject) => {
+        return new Promise<string | null>((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         })
           .then((token) => {

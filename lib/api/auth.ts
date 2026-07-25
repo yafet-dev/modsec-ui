@@ -28,8 +28,8 @@ export interface ForgotPasswordResponse {
 }
 
 export interface ResetPasswordRequest {
+  token: string;
   password: string;
-  access_token: string;
 }
 
 export interface ResetPasswordResponse {
@@ -38,22 +38,31 @@ export interface ResetPasswordResponse {
 
 export interface AcceptInvitationRequest {
   token: string;
-  password: string;
+  password?: string;
 }
 
 export interface AcceptInvitationResponse {
   message: string;
-  user: {
+  requiresLogin: boolean;
+  user?: {
     id: string;
     email: string;
     fullName: string | null;
     role: string | null;
   };
-  session: {
+  session?: {
     access_token: string;
     refresh_token: string;
     expires_at: number;
   };
+}
+
+export interface InvitationDetails {
+  email: string;
+  organizationName: string;
+  role: string;
+  requiresPassword: boolean;
+  expiresAt: string;
 }
 
 export interface User {
@@ -129,6 +138,14 @@ export const authApi = {
     const response = await apiClient.post<AcceptInvitationResponse>(
       "/invitations/accept",
       data
+    );
+    return response.data;
+  },
+
+  validateInvitation: async (token: string): Promise<InvitationDetails> => {
+    const response = await apiClient.post<InvitationDetails>(
+      "/invitations/validate",
+      { token }
     );
     return response.data;
   },

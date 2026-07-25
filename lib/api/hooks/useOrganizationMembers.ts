@@ -2,7 +2,15 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { organizationMembersApi, type InviteUserRequest } from "../organizationMembers";
+import { isAxiosError } from "axios";
 import toast from "react-hot-toast";
+
+function getApiErrorMessage(error: unknown, fallback: string): string {
+  if (isAxiosError<{ message?: string }>(error)) {
+    return error.response?.data?.message || fallback;
+  }
+  return fallback;
+}
 
 // Get my organization members
 export function useMyOrganizationMembers() {
@@ -24,10 +32,25 @@ export function useInviteUser() {
       queryClient.invalidateQueries({ queryKey: ["organization-members"] });
       toast.success(data.message);
     },
-    onError: (error: any) => {
-      const message =
-        error.response?.data?.message || "Failed to invite user";
-      toast.error(message);
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, "Failed to invite user"));
+    },
+  });
+}
+
+// Resend an invitation to a pending organization member
+export function useResendInvitation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (memberId: string) =>
+      organizationMembersApi.resendInvitation(memberId),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["organization-members"] });
+      toast.success(data.message);
+    },
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, "Failed to resend invitation"));
     },
   });
 }
@@ -43,10 +66,8 @@ export function useToggleUserDisabled() {
       queryClient.invalidateQueries({ queryKey: ["organization-members"] });
       toast.success(data.message);
     },
-    onError: (error: any) => {
-      const message =
-        error.response?.data?.message || "Failed to update user status";
-      toast.error(message);
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, "Failed to update user status"));
     },
   });
 }

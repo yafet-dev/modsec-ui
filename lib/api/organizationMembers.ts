@@ -33,6 +33,10 @@ export interface InviteUserResponse {
   member: OrganizationMember;
 }
 
+export interface ResendInvitationResponse {
+  message: string;
+}
+
 // Organization Members API functions
 export const organizationMembersApi = {
   getMyOrganization: async (): Promise<MyOrganizationMembersResponse> => {
@@ -46,6 +50,15 @@ export const organizationMembersApi = {
     const response = await apiClient.post<InviteUserResponse>(
       "/organization-members/invite",
       data
+    );
+    return response.data;
+  },
+
+  resendInvitation: async (
+    memberId: string
+  ): Promise<ResendInvitationResponse> => {
+    const response = await apiClient.post<ResendInvitationResponse>(
+      `/organization-members/${memberId}/resend-invitation`
     );
     return response.data;
   },

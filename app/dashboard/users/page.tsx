@@ -13,6 +13,7 @@ import {
   useMyOrganizationMembers,
   useToggleUserDisabled,
   useInviteUser,
+  useResendInvitation,
 } from "@/lib/api/hooks/useOrganizationMembers";
 import toast from "react-hot-toast";
 
@@ -28,6 +29,7 @@ export default function UsersPage() {
   } = useMyOrganizationMembers();
   const toggleDisabled = useToggleUserDisabled();
   const inviteUser = useInviteUser();
+  const resendInvitation = useResendInvitation();
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
@@ -62,13 +64,17 @@ export default function UsersPage() {
     );
   };
 
-  const handleDeleteUser = (userId: string) => {
+  const handleDeleteUser = () => {
     // Delete user - this would need a separate API endpoint
     toast.success("User deleted");
   };
 
   const handleToggleUserStatus = (userId: string) => {
     toggleDisabled.mutate(userId);
+  };
+
+  const handleResendInvitation = (memberId: string) => {
+    resendInvitation.mutate(memberId);
   };
 
   if (isAuthLoading || !isAuthenticated || currentRole === "super_admin") {
@@ -168,6 +174,14 @@ export default function UsersPage() {
             members={members}
             onDelete={handleDeleteUser}
             onToggleStatus={handleToggleUserStatus}
+            onResendInvitation={
+              currentRole === "admin" ? handleResendInvitation : undefined
+            }
+            resendingMemberId={
+              resendInvitation.isPending
+                ? resendInvitation.variables
+                : undefined
+            }
           />
         </Section>
       </main>

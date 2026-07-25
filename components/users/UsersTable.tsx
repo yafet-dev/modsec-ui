@@ -6,6 +6,8 @@ interface UsersTableProps {
   members: OrganizationMember[];
   onDelete: (userId: string) => void;
   onToggleStatus: (userId: string) => void;
+  onResendInvitation?: (memberId: string) => void;
+  resendingMemberId?: string;
 }
 
 function formatLastLogin(lastLogin: string | null): string {
@@ -90,6 +92,8 @@ export function UsersTable({
   members,
   onDelete,
   onToggleStatus,
+  onResendInvitation,
+  resendingMemberId,
 }: UsersTableProps) {
   if (!members || members.length === 0) {
     return (
@@ -184,6 +188,17 @@ export function UsersTable({
                   </td>
                   <td className="px-6 py-5">
                     <div className="flex items-center justify-end gap-2">
+                      {member.status === "pending" && onResendInvitation && (
+                        <button
+                          onClick={() => onResendInvitation(member.id)}
+                          disabled={Boolean(resendingMemberId)}
+                          className="px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-blue-900/20 dark:text-blue-300 dark:hover:bg-blue-900/40 transition-colors"
+                        >
+                          {resendingMemberId === member.id
+                            ? "Sending..."
+                            : "Resend Invite"}
+                        </button>
+                      )}
                       <button
                         onClick={() => onToggleStatus(user.id)}
                         className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${

@@ -1,14 +1,21 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState } from "react";
+import { isAxiosError } from "axios";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useResetPassword } from "@/lib/api/hooks/useAuth";
+import { useEmailActionToken } from "@/lib/hooks/useEmailActionToken";
+
+function getErrorMessage(error: unknown): string {
+  if (isAxiosError<{ message?: string }>(error)) {
+    return error.response?.data?.message || "Failed to reset password";
+  }
+  return "Failed to reset password";
+}
 
 function ResetPasswordContent() {
-  const searchParams = useSearchParams();
-  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const token = useEmailActionToken();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
@@ -18,30 +25,6 @@ function ResetPasswordContent() {
   }>({});
 
   const resetPassword = useResetPassword();
-
-  useEffect(() => {
-    // Extract token from URL hash (Supabase redirects with hash)
-    // Format: #access_token=xxx&type=recovery&...
-    const hash = window.location.hash;
-    if (hash) {
-      const params = new URLSearchParams(hash.substring(1));
-      const token = params.get("access_token");
-      const type = params.get("type");
-
-      if (type === "recovery" && token) {
-        setAccessToken(token);
-        return;
-      }
-    }
-
-    // Also check query params as fallback
-    const queryToken = searchParams.get("token");
-    if (queryToken) {
-      setAccessToken(queryToken);
-    } else {
-      setError("Invalid reset link. Please use the link from your email.");
-    }
-  }, [searchParams]);
 
   const validatePassword = (): boolean => {
     const errors: { password?: string; confirmPassword?: string } = {};
@@ -70,12 +53,12 @@ function ResetPasswordContent() {
       return;
     }
 
-    if (!accessToken) {
+    if (!token) {
       setError("Invalid reset link. Please use the link from your email.");
       return;
     }
 
-    resetPassword.mutate({ password, access_token: accessToken });
+    resetPassword.mutate({ password, token });
   };
 
   return (
@@ -121,16 +104,16 @@ function ResetPasswordContent() {
               error={passwordErrors.confirmPassword}
             />
 
-            {error && (
+            {(error || token === "") && (
               <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-800 dark:text-red-300">
-                {error}
+                {error ||
+                  "Invalid reset link. Please use the link from your email."}
               </div>
             )}
 
             {resetPassword.isError && (
               <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-800 dark:text-red-300">
-                {resetPassword.error?.response?.data?.message ||
-                  "Failed to reset password"}
+                {getErrorMessage(resetPassword.error)}
               </div>
             )}
 
@@ -139,7 +122,7 @@ function ResetPasswordContent() {
               variant="primary"
               size="lg"
               className="w-full"
-              disabled={resetPassword.isPending || !accessToken}
+              disabled={resetPassword.isPending || !token}
             >
               {resetPassword.isPending ? "Resetting..." : "Reset Password"}
             </Button>
@@ -151,17 +134,5 @@ function ResetPasswordContent() {
 }
 
 export default function ResetPasswordPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-          <div className="animate-pulse text-gray-500 dark:text-gray-400">
-            Loading...
-          </div>
-        </div>
-      }
-    >
-      <ResetPasswordContent />
-    </Suspense>
-  );
+  return <ResetPasswordContent />;
 }

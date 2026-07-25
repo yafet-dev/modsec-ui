@@ -1,7 +1,8 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import { isAxiosError } from "axios";
 import {
   authApi,
   LoginRequest,
@@ -10,6 +11,13 @@ import {
   AcceptInvitationRequest,
 } from "../auth";
 import toast from "react-hot-toast";
+
+function getApiErrorMessage(error: unknown, fallback: string): string {
+  if (isAxiosError<{ message?: string }>(error)) {
+    return error.response?.data?.message || fallback;
+  }
+  return fallback;
+}
 
 // Login mutation
 export function useLogin() {
@@ -35,10 +43,8 @@ export function useLogin() {
       toast.success("Login successful!");
       router.push("/dashboard");
     },
-    onError: (error: any) => {
-      const message =
-        error.response?.data?.message || "Login failed. Please try again.";
-      toast.error(message);
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, "Login failed. Please try again."));
     },
   });
 }
@@ -74,11 +80,13 @@ export function useForgotPassword() {
     onSuccess: (data) => {
       toast.success(data.message || "Password reset email sent!");
     },
-    onError: (error: any) => {
-      const message =
-        error.response?.data?.message ||
-        "Failed to send reset email. Please try again.";
-      toast.error(message);
+    onError: (error: unknown) => {
+      toast.error(
+        getApiErrorMessage(
+          error,
+          "Failed to send reset email. Please try again."
+        )
+      );
     },
   });
 }
@@ -93,11 +101,13 @@ export function useResetPassword() {
       toast.success(data.message || "Password reset successfully!");
       router.push("/");
     },
-    onError: (error: any) => {
-      const message =
-        error.response?.data?.message ||
-        "Failed to reset password. Please try again.";
-      toast.error(message);
+    onError: (error: unknown) => {
+      toast.error(
+        getApiErrorMessage(
+          error,
+          "Failed to reset password. Please try again."
+        )
+      );
     },
   });
 }
@@ -111,27 +121,46 @@ export function useAcceptInvitation() {
     mutationFn: (data: AcceptInvitationRequest) =>
       authApi.acceptInvitation(data),
     onSuccess: (data) => {
-      // Store auth data in localStorage
-      const authData = {
-        email: data.user.email,
-        access_token: data.session.access_token,
-        refresh_token: data.session.refresh_token,
-        expires_at: data.session.expires_at,
-        user: data.user,
-      };
-      localStorage.setItem("modsecurity_auth", JSON.stringify(authData));
-
-      // Invalidate and refetch user data
-      queryClient.setQueryData(["auth", "me"], data.user);
-
       toast.success(data.message || "Invitation accepted successfully!");
-      router.push("/dashboard");
+
+      if (data.session) {
+        const authData = {
+          email: data.user?.email,
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+          expires_at: data.session.expires_at,
+          user: data.user,
+        };
+        localStorage.setItem("modsecurity_auth", JSON.stringify(authData));
+
+        if (data.user) {
+          queryClient.setQueryData(["auth", "me"], data.user);
+        }
+        router.push("/dashboard");
+        return;
+      }
+
+      localStorage.removeItem("modsecurity_auth");
+      queryClient.setQueryData(["auth", "me"], null);
+      window.location.assign("/");
     },
-    onError: (error: any) => {
-      const message =
-        error.response?.data?.message ||
-        "Failed to accept invitation. Please try again.";
-      toast.error(message);
+    onError: (error: unknown) => {
+      toast.error(
+        getApiErrorMessage(
+          error,
+          "Failed to accept invitation. Please try again."
+        )
+      );
     },
+  });
+}
+
+export function useInvitationDetails(token: string) {
+  return useQuery({
+    queryKey: ["invitations", "validate", token],
+    queryFn: () => authApi.validateInvitation(token),
+    enabled: Boolean(token),
+    retry: false,
+    staleTime: 60 * 1000,
   });
 }
