@@ -1,0 +1,17 @@
+diff --git a/node_modules/@vnedyalk0v/react19-simple-maps/dist/index.js b/node_modules/@vnedyalk0v/react19-simple-maps/dist/index.js
+index 3fae725..0aec984 100644
+--- a/node_modules/@vnedyalk0v/react19-simple-maps/dist/index.js
++++ b/node_modules/@vnedyalk0v/react19-simple-maps/dist/index.js
+@@ -2563,10 +2563,9 @@ function useZoomPan({ center, filterZoomEvent, onMoveStart, onMoveEnd, onMove, t
+                 k: transform.k,
+                 dragging: sourceEvent,
+             };
+-            // Immediate optimistic update for responsive feel
+-            setOptimisticPosition(newPosition);
+-            // Use transition for non-blocking position updates
++            // React 19 requires optimistic updates to run inside a transition
+             startTransition(() => {
++                setOptimisticPosition(newPosition);
+                 setPosition(newPosition);
+             });
+         },

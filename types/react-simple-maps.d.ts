@@ -14,15 +14,27 @@ declare module "@vnedyalk0v/react19-simple-maps" {
     children?: ReactNode;
   }
 
+  export interface Position {
+    coordinates: [number, number];
+    zoom: number;
+  }
+
+  export interface ZoomPanState {
+    x: number;
+    y: number;
+    k: number;
+    transformString: string;
+  }
+
   export interface ZoomableGroupProps {
     center?: [number, number];
     zoom?: number;
     minZoom?: number;
     maxZoom?: number;
     translateExtent?: [[number, number], [number, number]];
-    onMoveStart?: (event: any) => void;
-    onMove?: (event: any) => void;
-    onMoveEnd?: (event: any) => void;
+    onMoveStart?: (position: Position, event: Event) => void;
+    onMove?: (position: Position, event: Event) => void;
+    onMoveEnd?: (position: Position, event: Event) => void;
     children?: ReactNode;
   }
 
@@ -55,12 +67,14 @@ declare module "@vnedyalk0v/react19-simple-maps" {
   export interface MarkerProps {
     coordinates: [number, number];
     children?: ReactNode;
+    className?: string;
     style?: {
       default?: CSSProperties;
       hover?: CSSProperties;
       pressed?: CSSProperties;
     };
     onMouseEnter?: (event: React.MouseEvent) => void;
+    onMouseMove?: (event: React.MouseEvent) => void;
     onMouseLeave?: (event: React.MouseEvent) => void;
     onClick?: (event: React.MouseEvent) => void;
   }
@@ -89,5 +103,8 @@ declare module "@vnedyalk0v/react19-simple-maps" {
   export const Marker: React.FC<MarkerProps>;
   export const Line: React.FC<LineProps>;
   export const Annotation: React.FC<AnnotationProps>;
+
+  /** Live zoom/pan transform of the enclosing <ZoomableGroup> */
+  export function useZoomPanContext(): ZoomPanState;
 }
 
