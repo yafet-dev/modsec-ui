@@ -2,8 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { TimeFilter, type TimeRange } from "./TimeFilter";
-import { useLogs } from "@/lib/api/hooks/useLogs";
-import type { LogEntry } from "@/data/logs";
+import { useLogAnalytics } from "@/lib/api/hooks/useLogs";
 import { StatsGridSkeleton } from "@/components/ui/Skeleton";
 
 interface Stat {
@@ -22,112 +21,20 @@ interface StatsGridProps {
   hostId?: string;
 }
 
-// Calculate start date based on time range
-function getStartDate(range: TimeRange): Date {
-  const now = new Date();
-  const start = new Date(now);
-
-  switch (range) {
-    case "24h":
-      start.setHours(now.getHours() - 24);
-      break;
-    case "7d":
-      start.setDate(now.getDate() - 7);
-      break;
-    case "30d":
-      start.setDate(now.getDate() - 30);
-      break;
-    case "3m":
-      start.setMonth(now.getMonth() - 3);
-      break;
-  }
-
-  return start;
-}
-
-// Filter logs by time range and host
-function filterLogsByRange(logs: LogEntry[], range: TimeRange, hostId: string): LogEntry[] {
-  const startDate = getStartDate(range);
-  
-  return logs.filter((log) => {
-    const logDate = new Date(log.timestamp);
-    
-    // Filter by time
-    if (logDate < startDate) {
-      return false;
-    }
-    
-    // Filter by host
-    if (hostId !== "all" && log.host !== hostId) {
-      return false;
-    }
-    
-    return true;
-  });
-}
-
-// Calculate threat level from logs
-function calculateThreatLevel(logs: LogEntry[]): string {
-  if (logs.length === 0) return "Low";
-
-  const severityCounts = {
-    critical: 0,
-    high: 0,
-    medium: 0,
-    low: 0,
-  };
-
-  logs.forEach((log) => {
-    const severity = log.severity.toLowerCase();
-    if (severityCounts.hasOwnProperty(severity)) {
-      severityCounts[severity as keyof typeof severityCounts]++;
-    }
-  });
-
-  const total = logs.length;
-  const criticalPercent = (severityCounts.critical / total) * 100;
-  const highPercent = (severityCounts.high / total) * 100;
-  const mediumPercent = (severityCounts.medium / total) * 100;
-
-  if (criticalPercent > 10 || (criticalPercent > 5 && highPercent > 20)) {
-    return "Critical";
-  }
-  if (highPercent > 15 || (highPercent > 10 && mediumPercent > 30)) {
-    return "High";
-  }
-  if (mediumPercent > 25 || (highPercent > 5 && mediumPercent > 15)) {
-    return "Medium";
-  }
-  return "Low";
-}
-
 export function StatsGrid({ hostId = "all" }: StatsGridProps) {
   const [timeRange, setTimeRange] = useState<TimeRange>("24h");
-  
-  // Fetch logs - get a large limit to calculate stats
-  // In production, you'd want a stats endpoint, but this works for now
-  const { data: logsResponse, isLoading } = useLogs({
-    page: 1,
-    limit: 1000, // Get enough logs to calculate stats
+  const { data: analytics, isLoading, isError } = useLogAnalytics({
+    range: timeRange,
     host: hostId !== "all" ? hostId : undefined,
   });
 
-  const logs = logsResponse?.logs || [];
-
-  // Filter logs by time range
-  const filteredLogs = useMemo(() => {
-    return filterLogsByRange(logs, timeRange, hostId);
-  }, [logs, timeRange, hostId]);
-
   // Calculate stats
   const stats = useMemo(() => {
-    const totalRequests = filteredLogs.length;
-    const blockedAttacks = filteredLogs.filter((log) => log.action === "blocked").length;
-    const threatLevel = calculateThreatLevel(filteredLogs);
+    const totalRequests = analytics?.summary.totalRequests ?? 0;
+    const blockedAttacks = analytics?.summary.blockedAttacks ?? 0;
+    const threatLevel = analytics?.summary.threatLevel ?? "Low";
 
     const formatValue = (num: number) => {
-      if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
-      if (num >= 1000) return `${(num / 1000).toFixed(0)}K`;
       return Math.round(num).toLocaleString();
     };
 
@@ -193,7 +100,7 @@ export function StatsGrid({ hostId = "all" }: StatsGridProps) {
         ),
       },
     ];
-  }, [filteredLogs]);
+  }, [analytics]);
 
   const getThreatLevelColor = (level: string) => {
     switch (level.toLowerCase()) {
@@ -219,12 +126,17 @@ export function StatsGrid({ hostId = "all" }: StatsGridProps) {
           </h2>
           <p className="text-sm text-gray-500 dark:text-gray-400">
             Key security metrics at a glance
+            {isError && analytics ? " · reconnecting" : ""}
           </p>
         </div>
         <TimeFilter selected={timeRange} onChange={setTimeRange} />
       </div>
 
-      {isLoading ? (
+      {isError && !analytics ? (
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-8 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-300">
+          Live overview metrics could not be loaded. The dashboard will retry automatically.
+        </div>
+      ) : isLoading ? (
         <StatsGridSkeleton />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

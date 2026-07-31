@@ -1,10 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useTheme } from "@/components/providers/ThemeProvider";
 import { ChartSkeleton } from "@/components/ui/Skeleton";
 import {
-  LineChart,
   Line,
   AreaChart,
   Area,
@@ -15,8 +13,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { TimeFilter, type TimeRange } from "./TimeFilter";
-import { useLogs } from "@/lib/api/hooks/useLogs";
-import { LogEntry } from "@/data/logs";
+import { useLogAnalytics } from "@/lib/api/hooks/useLogs";
 
 interface DataPoint {
   time: string;
@@ -29,182 +26,43 @@ interface AttackChartProps {
   hostId?: string;
 }
 
-// Calculate start date based on time range
-function getStartDate(range: TimeRange): Date {
-  const now = new Date();
-  const start = new Date(now);
-
-  switch (range) {
-    case "24h":
-      start.setHours(now.getHours() - 24);
-      break;
-    case "7d":
-      start.setDate(now.getDate() - 7);
-      break;
-    case "30d":
-      start.setDate(now.getDate() - 30);
-      break;
-    case "3m":
-      start.setMonth(now.getMonth() - 3);
-      break;
-  }
-
-  return start;
-}
-
-// Group logs by time intervals based on range
-function groupLogsByTimeRange(
-  logs: LogEntry[],
-  range: TimeRange,
-  hostId: string
-): DataPoint[] {
-  const startDate = getStartDate(range);
-  
-  // Filter logs by time range and host
-  const filteredLogs = logs.filter((log) => {
-    const logDate = new Date(log.timestamp);
-    if (logDate < startDate) return false;
-    if (hostId !== "all" && log.host !== hostId) return false;
-    return true;
-  });
-
-  const now = new Date();
-  let points = 24;
-  let intervalMs = 60 * 60 * 1000; // 1 hour in milliseconds
-
-  switch (range) {
-    case "24h":
-      points = 24;
-      intervalMs = 60 * 60 * 1000; // 1 hour
-      break;
-    case "7d":
-      points = 7;
-      intervalMs = 24 * 60 * 60 * 1000; // 1 day
-      break;
-    case "30d":
-      points = 30;
-      intervalMs = 24 * 60 * 60 * 1000; // 1 day
-      break;
-    case "3m":
-      points = 12;
-      intervalMs = 7 * 24 * 60 * 60 * 1000; // 1 week
-      break;
-  }
-
-  // Create time buckets
-  const buckets: Map<number, { attacks: number; blocked: number; allowed: number }> = new Map();
-  
-  // Initialize all buckets with zeros
-  for (let i = points - 1; i >= 0; i--) {
-    const bucketTime = new Date(now.getTime() - i * intervalMs);
-    // Round down to the start of the interval
-    const bucketKey = range === "24h"
-      ? new Date(bucketTime.getFullYear(), bucketTime.getMonth(), bucketTime.getDate(), bucketTime.getHours()).getTime()
-      : range === "7d" || range === "30d"
-      ? new Date(bucketTime.getFullYear(), bucketTime.getMonth(), bucketTime.getDate()).getTime()
-      : new Date(bucketTime.getFullYear(), bucketTime.getMonth(), bucketTime.getDate() - bucketTime.getDay()).getTime(); // Start of week
-    
-    buckets.set(bucketKey, { attacks: 0, blocked: 0, allowed: 0 });
-  }
-
-  // Group logs into buckets
-  filteredLogs.forEach((log) => {
-    const logDate = new Date(log.timestamp);
-    let bucketKey: number;
-    
-    if (range === "24h") {
-      bucketKey = new Date(logDate.getFullYear(), logDate.getMonth(), logDate.getDate(), logDate.getHours()).getTime();
-    } else if (range === "7d" || range === "30d") {
-      bucketKey = new Date(logDate.getFullYear(), logDate.getMonth(), logDate.getDate()).getTime();
-    } else {
-      // 3m - group by week
-      bucketKey = new Date(logDate.getFullYear(), logDate.getMonth(), logDate.getDate() - logDate.getDay()).getTime();
-    }
-
-    const bucket = buckets.get(bucketKey);
-    if (bucket) {
-      bucket.attacks++;
-      if (log.action === "blocked") {
-        bucket.blocked++;
-      } else {
-        bucket.allowed++;
-      }
-    }
-  });
-
-  // Convert buckets to data points with proper labels
-  const data: DataPoint[] = [];
-  for (let i = points - 1; i >= 0; i--) {
-    const bucketTime = new Date(now.getTime() - i * intervalMs);
-    let bucketKey: number;
-    
-    if (range === "24h") {
-      bucketKey = new Date(bucketTime.getFullYear(), bucketTime.getMonth(), bucketTime.getDate(), bucketTime.getHours()).getTime();
-    } else if (range === "7d" || range === "30d") {
-      bucketKey = new Date(bucketTime.getFullYear(), bucketTime.getMonth(), bucketTime.getDate()).getTime();
-    } else {
-      bucketKey = new Date(bucketTime.getFullYear(), bucketTime.getMonth(), bucketTime.getDate() - bucketTime.getDay()).getTime();
-    }
-
-    const bucket = buckets.get(bucketKey) || { attacks: 0, blocked: 0, allowed: 0 };
-    
-    const timeLabel =
-      range === "24h"
-        ? bucketTime.toLocaleTimeString("en-US", {
-            hour: "2-digit",
-            minute: "2-digit",
-          })
-        : range === "7d" || range === "30d"
-        ? bucketTime.toLocaleDateString("en-US", { month: "short", day: "numeric" })
-        : bucketTime.toLocaleDateString("en-US", { month: "short" });
-
-    data.push({
-      time: timeLabel,
-      attacks: bucket.attacks,
-      blocked: bucket.blocked,
-      allowed: bucket.allowed,
-    });
-  }
-
-  return data;
-}
-
 export function AttackChart({ hostId = "all" }: AttackChartProps) {
   const [timeRange, setTimeRange] = useState<TimeRange>("24h");
-  const { theme } = useTheme();
-  
-  // Determine limit based on time range
-  const limit = useMemo(() => {
-    switch (timeRange) {
-      case "24h":
-        return 5000; // Get more logs for 24h
-      case "7d":
-        return 10000;
-      case "30d":
-        return 50000;
-      case "3m":
-        return 100000;
-      default:
-        return 10000;
-    }
-  }, [timeRange]);
-
-  // Fetch logs from API
-  const { data: logsResponse, isLoading } = useLogs({
-    page: 1,
-    limit,
+  const { data: analytics, isLoading, isError } = useLogAnalytics({
+    range: timeRange,
     host: hostId !== "all" ? hostId : undefined,
   });
 
-  const logs = logsResponse?.logs || [];
+  const data = useMemo<DataPoint[]>(
+    () =>
+      (analytics?.series ?? []).map((point) => {
+        const timestamp = new Date(point.timestamp);
+        const time =
+          timeRange === "24h"
+            ? timestamp.toLocaleTimeString("en-US", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })
+            : timestamp.toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+              });
 
-  // Group logs by time range
-  const data = useMemo(() => {
-    return groupLogsByTimeRange(logs, timeRange, hostId);
-  }, [logs, timeRange, hostId]);
+        return { time, ...point };
+      }),
+    [analytics, timeRange]
+  );
 
   if (isLoading) {
     return <ChartSkeleton />;
+  }
+
+  if (isError && !analytics) {
+    return (
+      <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-8 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-300">
+        Live attack trends could not be loaded. The dashboard will retry automatically.
+      </div>
+    );
   }
 
   return (
@@ -216,6 +74,7 @@ export function AttackChart({ hostId = "all" }: AttackChartProps) {
           </h3>
           <p className="text-sm text-gray-500 dark:text-gray-400">
             Security events over time
+            {isError && analytics ? " · reconnecting" : ""}
           </p>
         </div>
         <TimeFilter selected={timeRange} onChange={setTimeRange} />

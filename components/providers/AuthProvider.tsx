@@ -60,7 +60,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isError) return;
     localStorage.removeItem("modsecurity_auth");
-    queryClient.removeQueries({ queryKey: ["auth", "me"] });
+    // Protected dashboard queries are tenant scoped by the access token. Drop
+    // every cached response before another account can sign in on this browser.
+    queryClient.clear();
   }, [isError, queryClient]);
 
   const isAuthLoading = !mounted || (!!hasToken && isPending);

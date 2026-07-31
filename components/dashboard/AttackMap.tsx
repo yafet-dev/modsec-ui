@@ -16,8 +16,8 @@ import { MapSkeleton } from "@/components/ui/Skeleton";
 import { ALL_COUNTRIES } from "@/lib/constants/countries";
 import { useAttackOrigins } from "@/lib/api/hooks/useLogs";
 
-const GEO_URL =
-  "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
+// Served with the app so rendering never depends on a third-party CDN.
+const GEO_URL = "/countries-110m.json";
 
 const MAP_WIDTH = 800;
 const MAP_HEIGHT = 400;
@@ -56,6 +56,7 @@ export interface AttackLocation {
 interface OriginGroup {
   id: string;
   country: string;
+  countryCode?: string;
   lat: number;
   lng: number;
   count: number;
@@ -237,7 +238,7 @@ export function AttackMap({ hostId = "all" }: AttackMapProps) {
   }, []);
 
   // Fetch attack origins from API
-  const { data: attackOriginsResponse, isLoading } = useAttackOrigins({
+  const { data: attackOriginsResponse, isLoading, isError } = useAttackOrigins({
     host: hostId !== "all" && hostId !== "Overview" ? hostId : undefined,
     limit: 50,
   });
@@ -254,7 +255,7 @@ export function AttackMap({ hostId = "all" }: AttackMapProps) {
 
       if (existing) {
         existing.count += origin.count;
-        existing.ipCount += 1;
+        existing.ipCount += origin.ipCount ?? 1;
         if (SEVERITY_RANK[origin.severity] > SEVERITY_RANK[existing.severity]) {
           existing.severity = origin.severity;
         }
@@ -264,10 +265,11 @@ export function AttackMap({ hostId = "all" }: AttackMapProps) {
       byCountry.set(key, {
         id: key,
         country,
+        countryCode: origin.countryCode,
         lat: origin.lat,
         lng: origin.lng,
         count: origin.count,
-        ipCount: 1,
+        ipCount: origin.ipCount ?? 1,
         severity: origin.severity,
         coords: [origin.lng, origin.lat],
       });
@@ -275,6 +277,7 @@ export function AttackMap({ hostId = "all" }: AttackMapProps) {
 
     return [...byCountry.values()].sort((a, b) => b.count - a.count);
   }, [attackOriginsResponse]);
+  const originsWindowDays = attackOriginsResponse?.windowDays ?? 30;
 
   const maxCount = useMemo(
     () => Math.max(...origins.map((o) => o.count), 1),
@@ -334,30 +337,17 @@ export function AttackMap({ hostId = "all" }: AttackMapProps) {
 
   const isDark = theme === "dark";
 
-  // Show skeleton while attack data or geography is loading
+  // Origin totals are required; geography loads independently below.
   if (isLoading) {
     return <MapSkeleton />;
   }
 
-  if (geoError) {
+  if (isError && !attackOriginsResponse) {
     return (
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Attack Origins
-          </h3>
-        </div>
-        <div className="relative w-full min-h-96 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800/50 flex items-center justify-center">
-          <p className="text-gray-500 dark:text-gray-400">
-            Map unavailable: {geoError}
-          </p>
-        </div>
+      <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-8 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-300">
+        Live attack origins could not be loaded. The dashboard will retry automatically.
       </div>
     );
-  }
-
-  if (!geoData) {
-    return <MapSkeleton />;
   }
 
   return (
@@ -375,7 +365,7 @@ export function AttackMap({ hostId = "all" }: AttackMapProps) {
               <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
             </span>
             <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-              LIVE
+              {isError ? "RECONNECTING" : "LIVE"} · {originsWindowDays} DAYS
             </span>
           </div>
         </div>
@@ -408,62 +398,70 @@ export function AttackMap({ hostId = "all" }: AttackMapProps) {
           ref={containerRef}
           className="relative flex-1 min-w-0 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-800"
         >
-          <ComposableMap
-            width={MAP_WIDTH}
-            height={MAP_HEIGHT}
-            projection="geoEqualEarth"
-            projectionConfig={{
-              scale: 147,
-              center: HOME_CENTER,
-            }}
-            style={{ width: "100%", height: "auto", maxHeight: "24rem" }}
-          >
-            <ZoomableGroup
-              center={view.center}
-              zoom={view.zoom}
-              minZoom={MIN_ZOOM}
-              maxZoom={MAX_ZOOM}
-              onMoveEnd={(position) =>
-                setView({ center: position.coordinates, zoom: position.zoom })
-              }
+          {geoData ? (
+            <ComposableMap
+              width={MAP_WIDTH}
+              height={MAP_HEIGHT}
+              projection="geoEqualEarth"
+              projectionConfig={{
+                scale: 147,
+                center: HOME_CENTER,
+              }}
+              style={{ width: "100%", height: "auto", maxHeight: "24rem" }}
             >
-              <Geographies geography={geoData}>
-                {({ geographies }) =>
-                  geographies.map((geo, idx) => (
-                    <Geography
-                      key={(geo as { rsmKey?: string }).rsmKey ?? `geo-${idx}`}
-                      geography={geo}
-                      fill={isDark ? "#1f2937" : "#e5e7eb"}
-                      stroke={isDark ? "#374151" : "#d1d5db"}
-                      strokeWidth={0.5}
-                      style={{
-                        default: { outline: "none" },
-                        hover: {
-                          fill: isDark ? "#374151" : "#d1d5db",
-                          outline: "none",
-                        },
-                        pressed: { outline: "none" },
-                      }}
-                    />
-                  ))
+              <ZoomableGroup
+                center={view.center}
+                zoom={view.zoom}
+                minZoom={MIN_ZOOM}
+                maxZoom={MAX_ZOOM}
+                onMoveEnd={(position) =>
+                  setView({ center: position.coordinates, zoom: position.zoom })
                 }
-              </Geographies>
+              >
+                <Geographies geography={geoData}>
+                  {({ geographies }) =>
+                    geographies.map((geo, idx) => (
+                      <Geography
+                        key={(geo as { rsmKey?: string }).rsmKey ?? `geo-${idx}`}
+                        geography={geo}
+                        fill={isDark ? "#1f2937" : "#e5e7eb"}
+                        stroke={isDark ? "#374151" : "#d1d5db"}
+                        strokeWidth={0.5}
+                        style={{
+                          default: { outline: "none" },
+                          hover: {
+                            fill: isDark ? "#374151" : "#d1d5db",
+                            outline: "none",
+                          },
+                          pressed: { outline: "none" },
+                        }}
+                      />
+                    ))
+                  }
+                </Geographies>
 
-              <MarkerLayer
-                origins={origins}
-                maxCount={maxCount}
-                hoveredId={hoveredId}
-                selectedId={selectedId}
-                pulseId={pulseId}
-                onHover={handleHover}
-                onLeave={handleLeave}
-                onSelect={focusOrigin}
-              />
-            </ZoomableGroup>
-          </ComposableMap>
+                <MarkerLayer
+                  origins={origins}
+                  maxCount={maxCount}
+                  hoveredId={hoveredId}
+                  selectedId={selectedId}
+                  pulseId={pulseId}
+                  onHover={handleHover}
+                  onLeave={handleLeave}
+                  onSelect={focusOrigin}
+                />
+              </ZoomableGroup>
+            </ComposableMap>
+          ) : (
+            <div className="flex min-h-96 items-center justify-center px-6 text-center text-sm text-gray-500 dark:text-gray-400">
+              {geoError
+                ? `Map unavailable: ${geoError}. Origin totals are still available.`
+                : "Loading map… Origin totals are already available."}
+            </div>
+          )}
 
           {/* Zoom controls */}
-          <div className="absolute bottom-3 right-3 flex flex-col overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm shadow-sm">
+          {geoData && <div className="absolute bottom-3 right-3 flex flex-col overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm shadow-sm">
             <button
               type="button"
               onClick={() => zoomBy(ZOOM_STEP)}
@@ -497,15 +495,15 @@ export function AttackMap({ hostId = "all" }: AttackMapProps) {
                 <path d="M3 3v5h5" />
               </svg>
             </button>
-          </div>
+          </div>}
 
           {/* Hint */}
-          <div className="absolute bottom-3 left-3 text-[10px] text-gray-500 dark:text-gray-500 pointer-events-none select-none">
+          {geoData && <div className="absolute bottom-3 left-3 text-[10px] text-gray-500 dark:text-gray-500 pointer-events-none select-none">
             Scroll to zoom · drag to pan
-          </div>
+          </div>}
 
           {/* Hover tooltip */}
-          {hoveredOrigin && tooltip && (
+          {geoData && hoveredOrigin && tooltip && (
             <div
               className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-[calc(100%+12px)] whitespace-nowrap rounded-lg border border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-900/95 px-3 py-2 shadow-lg backdrop-blur-sm"
               style={{ left: tooltip.x, top: tooltip.y }}
@@ -527,7 +525,7 @@ export function AttackMap({ hostId = "all" }: AttackMapProps) {
             </div>
           )}
 
-          {origins.length === 0 && (
+          {geoData && origins.length === 0 && (
             <div className="absolute inset-0 flex items-center justify-center">
               <p className="rounded-lg bg-white/80 dark:bg-gray-900/80 px-4 py-2 text-sm text-gray-500 dark:text-gray-400 backdrop-blur-sm">
                 No attack origins recorded
@@ -549,7 +547,9 @@ export function AttackMap({ hostId = "all" }: AttackMapProps) {
 
           <ul className="max-h-96 space-y-1 overflow-y-auto pr-1">
             {origins.slice(0, 8).map((origin, index) => {
-              const code = COUNTRY_CODE_BY_NAME[origin.country.toLowerCase()];
+              const code =
+                origin.countryCode ??
+                COUNTRY_CODE_BY_NAME[origin.country.toLowerCase()];
               const isActive = selectedId === origin.id || hoveredId === origin.id;
 
               return (

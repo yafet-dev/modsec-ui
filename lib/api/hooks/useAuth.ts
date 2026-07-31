@@ -27,6 +27,10 @@ export function useLogin() {
   return useMutation({
     mutationFn: (data: LoginRequest) => authApi.login(data),
     onSuccess: (data) => {
+      // A shared browser may previously have held another tenant's protected
+      // queries. Clear them before installing the new session.
+      queryClient.clear();
+
       // Store auth data in localStorage
       const authData = {
         email: data.user.email,
@@ -124,6 +128,7 @@ export function useAcceptInvitation() {
       toast.success(data.message || "Invitation accepted successfully!");
 
       if (data.session) {
+        queryClient.clear();
         const authData = {
           email: data.user?.email,
           access_token: data.session.access_token,
@@ -141,7 +146,7 @@ export function useAcceptInvitation() {
       }
 
       localStorage.removeItem("modsecurity_auth");
-      queryClient.setQueryData(["auth", "me"], null);
+      queryClient.clear();
       window.location.assign("/");
     },
     onError: (error: unknown) => {

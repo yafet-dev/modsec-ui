@@ -21,19 +21,46 @@ export interface GetLogsParams {
 export interface AttackOrigin {
   ip: string;
   country: string;
+  countryCode?: string;
   lat: number;
   lng: number;
   count: number;
+  ipCount?: number;
   severity: 'high' | 'medium' | 'low';
 }
 
 export interface AttackOriginsResponse {
   origins: AttackOrigin[];
+  windowDays: number;
 }
 
 export interface GetAttackOriginsParams {
   host?: string;
   limit?: number;
+}
+
+export type LogAnalyticsRange = '24h' | '7d' | '30d' | '3m';
+
+export interface GetLogAnalyticsParams {
+  range: LogAnalyticsRange;
+  host?: string;
+}
+
+export interface LogAnalyticsResponse {
+  range: LogAnalyticsRange;
+  start: string;
+  end: string;
+  summary: {
+    totalRequests: number;
+    blockedAttacks: number;
+    threatLevel: 'Low' | 'Medium' | 'High' | 'Critical';
+  };
+  series: Array<{
+    timestamp: string;
+    attacks: number;
+    blocked: number;
+    allowed: number;
+  }>;
 }
 
 export interface LogHost {
@@ -87,6 +114,18 @@ export const logsApi = {
     return response.data;
   },
 
+  getAnalytics: async (
+    params: GetLogAnalyticsParams
+  ): Promise<LogAnalyticsResponse> => {
+    const queryParams = new URLSearchParams({ range: params.range });
+    if (params.host) queryParams.append('host', params.host);
+
+    const response = await apiClient.get<LogAnalyticsResponse>(
+      `/logs/analytics?${queryParams.toString()}`
+    );
+    return response.data;
+  },
+
   getAttackOrigins: async (params?: GetAttackOriginsParams): Promise<AttackOriginsResponse> => {
     const queryParams = new URLSearchParams();
     if (params?.host) queryParams.append('host', params.host);
@@ -95,11 +134,7 @@ export const logsApi = {
     const queryString = queryParams.toString();
     const url = `/logs/attack-origins${queryString ? `?${queryString}` : ''}`;
     
-    console.log('[Attack Origins API] Fetching from:', url);
     const response = await apiClient.get<AttackOriginsResponse>(url);
-    console.log('[Attack Origins API] Response:', response.data);
-    console.log('[Attack Origins API] Origins count:', response.data?.origins?.length || 0);
-    console.log('[Attack Origins API] Origins data:', JSON.stringify(response.data?.origins || [], null, 2));
     return response.data;
   },
 };

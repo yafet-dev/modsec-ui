@@ -1,7 +1,12 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { logsApi, GetLogsParams, GetAttackOriginsParams } from '../logs';
+import {
+  logsApi,
+  GetLogsParams,
+  GetAttackOriginsParams,
+  GetLogAnalyticsParams,
+} from '../logs';
 
 // Get logs with filters
 export function useLogs(params?: GetLogsParams) {
@@ -33,13 +38,26 @@ export function useLogHosts(organizationId?: string) {
   });
 }
 
+// Server-side aggregates used by Overview and Attack Trends. Components with
+// the same host/range share this query instead of downloading raw log pages.
+export function useLogAnalytics(params: GetLogAnalyticsParams) {
+  return useQuery({
+    queryKey: ['log-analytics', params.range, params.host ?? 'all'],
+    queryFn: () => logsApi.getAnalytics(params),
+    staleTime: 10 * 1000,
+    refetchInterval: 30 * 1000,
+    refetchIntervalInBackground: false,
+  });
+}
+
 // Get attack origins
 export function useAttackOrigins(params?: GetAttackOriginsParams) {
   return useQuery({
     queryKey: ['attack-origins', params],
     queryFn: () => logsApi.getAttackOrigins(params),
-    staleTime: 10 * 1000, // 10 seconds - match logs refresh rate
-    refetchInterval: 30 * 1000, // Refetch every 30 seconds for real-time updates
+    staleTime: 60 * 1000,
+    refetchInterval: 60 * 1000,
+    refetchIntervalInBackground: false,
   });
 }
 
