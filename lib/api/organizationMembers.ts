@@ -37,6 +37,10 @@ export interface ResendInvitationResponse {
   message: string;
 }
 
+export interface DeleteOrganizationMemberResponse {
+  message: string;
+}
+
 // Organization Members API functions
 export const organizationMembersApi = {
   getMyOrganization: async (): Promise<MyOrganizationMembersResponse> => {
@@ -66,6 +70,15 @@ export const organizationMembersApi = {
   toggleDisabled: async (userId: string): Promise<{ message: string; user: { id: string; email: string; fullName: string | null; disabled: boolean } }> => {
     const response = await apiClient.patch<{ message: string; user: { id: string; email: string; fullName: string | null; disabled: boolean } }>(
       `/organization-members/${userId}/toggle-disabled`
+    );
+    return response.data;
+  },
+
+  deleteMember: async (
+    memberId: string
+  ): Promise<DeleteOrganizationMemberResponse> => {
+    const response = await apiClient.delete<DeleteOrganizationMemberResponse>(
+      `/organization-members/${memberId}`
     );
     return response.data;
   },

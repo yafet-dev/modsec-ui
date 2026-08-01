@@ -53,7 +53,13 @@ export interface LogAnalyticsResponse {
   summary: {
     totalRequests: number;
     blockedAttacks: number;
+    allowedRequests: number;
     threatLevel: 'Low' | 'Medium' | 'High' | 'Critical';
+    topRule: {
+      ruleId: string;
+      ruleName: string;
+      count: number;
+    } | null;
   };
   series: Array<{
     timestamp: string;
@@ -70,6 +76,13 @@ export interface LogHost {
 
 export interface LogHostsResponse {
   hosts: LogHost[];
+}
+
+export interface LogProcessingStatusResponse {
+  pendingCount: number;
+  oldestPendingAt: string | null;
+  checkedAt: string;
+  isProcessing: boolean;
 }
 
 // Logs API functions
@@ -122,6 +135,19 @@ export const logsApi = {
 
     const response = await apiClient.get<LogAnalyticsResponse>(
       `/logs/analytics?${queryParams.toString()}`
+    );
+    return response.data;
+  },
+
+  getProcessingStatus: async (
+    host?: string
+  ): Promise<LogProcessingStatusResponse> => {
+    const queryParams = new URLSearchParams();
+    if (host) queryParams.append('host', host);
+
+    const queryString = queryParams.toString();
+    const response = await apiClient.get<LogProcessingStatusResponse>(
+      `/logs/processing-status${queryString ? `?${queryString}` : ''}`
     );
     return response.data;
   },

@@ -50,6 +50,17 @@ export function useLogAnalytics(params: GetLogAnalyticsParams) {
   });
 }
 
+// Raw WAF events waiting to be normalized into user-visible logs.
+export function useLogProcessingStatus(host?: string) {
+  return useQuery({
+    queryKey: ['log-processing-status', host ?? 'all'],
+    queryFn: () => logsApi.getProcessingStatus(host),
+    staleTime: 5 * 1000,
+    refetchInterval: 15 * 1000,
+    refetchIntervalInBackground: false,
+  });
+}
+
 // Get attack origins
 export function useAttackOrigins(params?: GetAttackOriginsParams) {
   return useQuery({

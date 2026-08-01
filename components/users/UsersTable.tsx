@@ -1,13 +1,16 @@
 "use client";
 
 import { type OrganizationMember } from "@/lib/api/organizationMembers";
+import { useConfirmation } from "@/components/providers/ConfirmationProvider";
 
 interface UsersTableProps {
   members: OrganizationMember[];
-  onDelete: (userId: string) => void;
+  onDelete?: (memberId: string) => void;
   onToggleStatus: (userId: string) => void;
   onResendInvitation?: (memberId: string) => void;
   resendingMemberId?: string;
+  currentUserId?: string;
+  deletingMemberId?: string;
 }
 
 function formatLastLogin(lastLogin: string | null): string {
@@ -94,7 +97,25 @@ export function UsersTable({
   onToggleStatus,
   onResendInvitation,
   resendingMemberId,
+  currentUserId,
+  deletingMemberId,
 }: UsersTableProps) {
+  const { confirm } = useConfirmation();
+
+  const handleDelete = async (memberId: string, email: string) => {
+    const confirmed = await confirm({
+      title: "Delete user",
+      message: `Are you sure you want to delete ${email}? This action cannot be undone.`,
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      variant: "danger",
+    });
+
+    if (confirmed && onDelete) {
+      onDelete(memberId);
+    }
+  };
+
   if (!members || members.length === 0) {
     return (
       <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-12 text-center">
@@ -209,20 +230,19 @@ export function UsersTable({
                       >
                         {user.disabled ? "Enable" : "Disable"}
                       </button>
-                      <button
-                        onClick={() => {
-                          if (
-                            confirm(
-                              `Are you sure you want to delete ${user.email}? This action cannot be undone.`
-                            )
-                          ) {
-                            onDelete(user.id);
+                      {onDelete && user.id !== currentUserId && (
+                        <button
+                          onClick={() =>
+                            void handleDelete(member.id, user.email)
                           }
-                        }}
-                        className="px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                      >
-                        Delete
-                      </button>
+                          disabled={Boolean(deletingMemberId)}
+                          className="px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {deletingMemberId === member.id
+                            ? "Deleting..."
+                            : "Delete"}
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

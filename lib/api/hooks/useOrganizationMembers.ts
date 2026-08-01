@@ -1,7 +1,11 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { organizationMembersApi, type InviteUserRequest } from "../organizationMembers";
+import {
+  organizationMembersApi,
+  type InviteUserRequest,
+  type MyOrganizationMembersResponse,
+} from "../organizationMembers";
 import { isAxiosError } from "axios";
 import toast from "react-hot-toast";
 
@@ -68,6 +72,35 @@ export function useToggleUserDisabled() {
     },
     onError: (error: unknown) => {
       toast.error(getApiErrorMessage(error, "Failed to update user status"));
+    },
+  });
+}
+
+// Delete a member from the current admin's organization
+export function useDeleteOrganizationMember() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (memberId: string) =>
+      organizationMembersApi.deleteMember(memberId),
+    onSuccess: (data, memberId) => {
+      queryClient.setQueryData<MyOrganizationMembersResponse>(
+        ["organization-members", "my-organization"],
+        (current) =>
+          current
+            ? {
+                ...current,
+                members: current.members.filter(
+                  (member) => member.id !== memberId
+                ),
+              }
+            : current
+      );
+      queryClient.invalidateQueries({ queryKey: ["organization-members"] });
+      toast.success(data.message);
+    },
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, "Failed to delete user"));
     },
   });
 }

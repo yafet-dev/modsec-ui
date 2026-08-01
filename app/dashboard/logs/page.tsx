@@ -11,8 +11,14 @@ import { HostSelector } from "@/components/ui/HostSelector";
 import { LogsTable } from "@/components/logs/LogsTable";
 import { LogsFilters } from "@/components/logs/LogsFilters";
 import { LogDetailPanel } from "@/components/logs/LogDetailPanel";
-import { getLogStats, type LogEntry } from "@/data/logs";
-import { useLogs, useLogHosts } from "@/lib/api/hooks/useLogs";
+import { LogProcessingStatus } from "@/components/logs/LogProcessingStatus";
+import type { LogEntry } from "@/data/logs";
+import {
+  useLogs,
+  useLogAnalytics,
+  useLogHosts,
+} from "@/lib/api/hooks/useLogs";
+import type { GetLogsParams } from "@/lib/api/logs";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -66,23 +72,31 @@ export default function LogsPage() {
     );
   }, [logHostsResponse]);
 
+  const effectiveSelectedHost =
+    selectedHost === "all" ||
+    uniqueHosts.length === 0 ||
+    uniqueHosts.some(({ host }) => host === selectedHost)
+      ? selectedHost
+      : "all";
+
   // Build API params
   const apiParams = useMemo(() => {
-    const params: any = {
+    const params: GetLogsParams = {
       page: currentPage,
       limit: ITEMS_PER_PAGE,
     };
 
-    if (selectedHost !== "all") {
-      params.host = selectedHost;
+    if (effectiveSelectedHost !== "all") {
+      params.host = effectiveSelectedHost;
     }
 
     if (severityFilter !== "all") {
-      params.severity = severityFilter.toUpperCase();
+      params.severity =
+        severityFilter.toUpperCase() as GetLogsParams["severity"];
     }
 
     if (actionFilter !== "all") {
-      params.action = actionFilter;
+      params.action = actionFilter as GetLogsParams["action"];
     }
 
     if (searchQuery) {
@@ -90,34 +104,56 @@ export default function LogsPage() {
     }
 
     return params;
-  }, [currentPage, selectedHost, severityFilter, actionFilter, searchQuery]);
+  }, [
+    currentPage,
+    effectiveSelectedHost,
+    severityFilter,
+    actionFilter,
+    searchQuery,
+  ]);
 
   // Fetch logs from API (automatically filtered by user's organizations)
   const { data: logsResponse, isLoading, error } = useLogs(apiParams);
+  const {
+    data: analytics,
+    isLoading: analyticsLoading,
+    isError: analyticsError,
+  } = useLogAnalytics({
+    range: "24h",
+    host:
+      effectiveSelectedHost !== "all" ? effectiveSelectedHost : undefined,
+  });
 
   const logs = logsResponse?.logs || [];
   const totalLogs = logsResponse?.total || 0;
   const totalPages = Math.ceil(totalLogs / ITEMS_PER_PAGE);
 
-  // Reset page when filters change
-  useEffect(() => {
+  const handleHostChange = (host: string) => {
+    setSelectedHost(host);
     setCurrentPage(1);
-  }, [selectedHost, searchQuery, severityFilter, actionFilter]);
+  };
 
-  // Drop a selection that no longer exists, so the page cannot sit on a host
-  // with no rows and look empty.
-  useEffect(() => {
-    if (
-      selectedHost !== "all" &&
-      uniqueHosts.length > 0 &&
-      !uniqueHosts.some((h) => h.host === selectedHost)
-    ) {
-      setSelectedHost("all");
-    }
-  }, [uniqueHosts, selectedHost]);
+  const handleSearchChange = (search: string) => {
+    setSearchQuery(search);
+    setCurrentPage(1);
+  };
 
-  // Stats based on current page logs (could be enhanced to get all stats from API)
-  const stats = useMemo(() => getLogStats(logs), [logs]);
+  const handleSeverityChange = (severity: string) => {
+    setSeverityFilter(severity);
+    setCurrentPage(1);
+  };
+
+  const handleActionChange = (action: string) => {
+    setActionFilter(action);
+    setCurrentPage(1);
+  };
+
+  const formatCount = (value: number | undefined) => {
+    if (value === undefined) return analyticsLoading ? "Loading..." : "—";
+    return value.toLocaleString();
+  };
+
+  const topRule = analytics?.summary.topRule;
 
   if (isAuthLoading || !isAuthenticated || currentRole === "super_admin") {
     return null;
@@ -137,49 +173,65 @@ export default function LogsPage() {
               </p>
             </div>
             <HostSelector
-              selectedHost={selectedHost}
-              onHostChange={setSelectedHost}
+              selectedHost={effectiveSelectedHost}
+              onHostChange={handleHostChange}
               hosts={uniqueHosts}
               className="w-full sm:w-auto shrink-0"
             />
           </div>
 
+          <LogProcessingStatus />
+
           {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
             <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-6">
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">
-                Blocked Today
+                Blocked (24h)
               </p>
               <p className="text-3xl font-semibold text-gray-900 dark:text-white">
-                {stats.blockedToday}
+                {formatCount(analytics?.summary.blockedAttacks)}
               </p>
             </div>
             <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-6">
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">
-                Allowed Today
+                Allowed (24h)
               </p>
               <p className="text-3xl font-semibold text-gray-900 dark:text-white">
-                {stats.warningToday}
+                {formatCount(analytics?.summary.allowedRequests)}
               </p>
             </div>
             <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-6">
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">
                 Top Rule
               </p>
-              <p className="text-xl font-semibold text-gray-900 dark:text-white truncate">
-                {stats.topRule}
+              <p
+                className="text-xl font-semibold text-gray-900 dark:text-white truncate"
+                title={topRule?.ruleName}
+              >
+                {topRule
+                  ? topRule.ruleName
+                  : analyticsLoading
+                    ? "Loading..."
+                    : analyticsError
+                      ? "Unavailable"
+                      : "None"}
               </p>
+              {topRule && (
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 truncate">
+                  Rule {topRule.ruleId} · {topRule.count.toLocaleString()} events
+                </p>
+              )}
             </div>
           </div>
 
           {/* Filters */}
           <LogsFilters
             searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
+            onSearchChange={handleSearchChange}
             severityFilter={severityFilter}
-            onSeverityChange={setSeverityFilter}
+            onSeverityChange={handleSeverityChange}
             actionFilter={actionFilter}
-            onActionChange={setActionFilter}
+            onActionChange={handleActionChange}
           />
 
           {/* Logs Table */}
