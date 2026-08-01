@@ -13,7 +13,8 @@ export function LogProcessingStatus({ host }: LogProcessingStatusProps) {
   const previousStatus = useRef<{ scope: string; pendingCount: number } | null>(
     null
   );
-  const { data, isLoading, isError } = useLogProcessingStatus(host);
+  const { data, isLoading, isError, failureCount } =
+    useLogProcessingStatus(host);
 
   useEffect(() => {
     const pendingCount = data?.pendingCount;
@@ -22,7 +23,8 @@ export function LogProcessingStatus({ host }: LogProcessingStatusProps) {
 
     if (
       previousStatus.current?.scope === scope &&
-      pendingCount < previousStatus.current.pendingCount
+      previousStatus.current.pendingCount > 0 &&
+      pendingCount === 0
     ) {
       void queryClient.invalidateQueries({ queryKey: ["logs"] });
       void queryClient.invalidateQueries({ queryKey: ["log-analytics"] });
@@ -31,6 +33,18 @@ export function LogProcessingStatus({ host }: LogProcessingStatusProps) {
 
     previousStatus.current = { scope, pendingCount };
   }, [data?.pendingCount, host, queryClient]);
+
+  const lastChecked = data
+    ? (() => {
+        const date = new Date(data.checkedAt);
+        return Number.isNaN(date.getTime())
+          ? null
+          : date.toLocaleTimeString(undefined, {
+              hour: "numeric",
+              minute: "2-digit",
+            });
+      })()
+    : null;
 
   if (isLoading && !data) {
     return (
@@ -42,9 +56,17 @@ export function LogProcessingStatus({ host }: LogProcessingStatusProps) {
         <div className="h-10 w-10 shrink-0 animate-pulse rounded-xl bg-gray-200 dark:bg-gray-800" />
         <div className="min-w-0 flex-1">
           <p className="font-medium text-gray-700 dark:text-gray-200">
-            Checking the processing queue…
+            {failureCount > 0
+              ? "The processing queue is taking longer than expected…"
+              : "Checking the processing queue…"}
           </p>
-          <div className="mt-2 h-2.5 w-64 max-w-full animate-pulse rounded-full bg-gray-200 dark:bg-gray-800" />
+          {failureCount > 0 ? (
+            <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
+              Visible logs remain available while we try once more.
+            </p>
+          ) : (
+            <div className="mt-2 h-2.5 w-64 max-w-full animate-pulse rounded-full bg-gray-200 dark:bg-gray-800" />
+          )}
         </div>
       </div>
     );
@@ -67,7 +89,8 @@ export function LogProcessingStatus({ host }: LogProcessingStatusProps) {
             Processing status unavailable
           </p>
           <p className="mt-0.5 text-sm text-amber-700 dark:text-amber-300">
-            Visible logs are unaffected. We’ll keep retrying automatically.
+            The queue check timed out or could not be completed. Visible logs
+            are unaffected, and we’ll keep retrying automatically.
           </p>
         </div>
       </div>
@@ -90,10 +113,14 @@ export function LogProcessingStatus({ host }: LogProcessingStatusProps) {
         </div>
         <div className="min-w-0 flex-1">
           <p className="font-semibold text-emerald-950 dark:text-emerald-100">
-            Logs are up to date
+            {isError
+              ? "Last known status: logs were up to date"
+              : "Logs are up to date"}
           </p>
           <p className="mt-0.5 text-sm text-emerald-700 dark:text-emerald-300">
-            No WAF events for your organization are waiting to sync.
+            {isError
+              ? `The queue could not be refreshed${lastChecked ? `; last checked at ${lastChecked}` : ""}. We’ll keep retrying automatically.`
+              : "No WAF events for your organization are waiting to sync."}
           </p>
         </div>
         {isError && (
@@ -130,11 +157,24 @@ export function LogProcessingStatus({ host }: LogProcessingStatusProps) {
 
         <div className="min-w-0 flex-1">
           <p className="text-lg font-semibold text-blue-950 dark:text-blue-100">
-            {count} WAF {eventLabel} {data.isProcessing ? "processing" : "waiting to sync"}
+            {isError ? "Last known: " : ""}
+            {count} WAF {eventLabel}{" "}
+            {!isError && data.isProcessing ? "processing" : "waiting to sync"}
           </p>
           <p className="mt-1 text-sm leading-5 text-blue-700 dark:text-blue-300">
-            Incoming security events for your organization are being normalized
-            and will appear in Logs and Dashboard metrics automatically.
+            {isError ? (
+              <>
+                The queue could not be refreshed
+                {lastChecked ? `; last checked at ${lastChecked}` : ""}. We’ll
+                keep retrying automatically.
+              </>
+            ) : (
+              <>
+                Incoming security events for your organization are being
+                normalized and will appear in Logs and Dashboard metrics
+                automatically.
+              </>
+            )}
           </p>
         </div>
 

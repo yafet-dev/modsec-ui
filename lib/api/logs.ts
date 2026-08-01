@@ -140,14 +140,21 @@ export const logsApi = {
   },
 
   getProcessingStatus: async (
-    host?: string
+    host?: string,
+    signal?: AbortSignal
   ): Promise<LogProcessingStatusResponse> => {
     const queryParams = new URLSearchParams();
     if (host) queryParams.append('host', host);
 
     const queryString = queryParams.toString();
     const response = await apiClient.get<LogProcessingStatusResponse>(
-      `/logs/processing-status${queryString ? `?${queryString}` : ''}`
+      `/logs/processing-status${queryString ? `?${queryString}` : ''}`,
+      {
+        signal,
+        // A large or unhealthy queue must not leave this status request open
+        // indefinitely. The query will surface the delay and poll again.
+        timeout: 10 * 1000,
+      }
     );
     return response.data;
   },

@@ -54,10 +54,13 @@ export function useLogAnalytics(params: GetLogAnalyticsParams) {
 export function useLogProcessingStatus(host?: string) {
   return useQuery({
     queryKey: ['log-processing-status', host ?? 'all'],
-    queryFn: () => logsApi.getProcessingStatus(host),
+    queryFn: ({ signal }) => logsApi.getProcessingStatus(host, signal),
     staleTime: 5 * 1000,
     refetchInterval: 15 * 1000,
     refetchIntervalInBackground: false,
+    // Bound slow/failing checks. The interval continues retrying without
+    // trapping the banner in its initial loading state for several minutes.
+    retry: 1,
   });
 }
 
