@@ -1,7 +1,9 @@
 "use client";
 
+import { ReactNode } from "react";
 import { type OrganizationMember } from "@/lib/api/organizationMembers";
 import { useConfirmation } from "@/components/providers/ConfirmationProvider";
+import { BUTTON_GHOST, Card, CardHeader } from "@/components/dashboard/dashboardUi";
 
 interface UsersTableProps {
   members: OrganizationMember[];
@@ -11,6 +13,9 @@ interface UsersTableProps {
   resendingMemberId?: string;
   currentUserId?: string;
   deletingMemberId?: string;
+  /** Optional card header. */
+  title?: string;
+  subtitle?: ReactNode;
 }
 
 function formatLastLogin(lastLogin: string | null): string {
@@ -24,69 +29,48 @@ function formatLastLogin(lastLogin: string | null): string {
   const diffDays = Math.floor(diffMs / 86400000);
 
   if (diffMins < 1) return "Just now";
-  if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? "s" : ""} ago`;
-  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
-  if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
 
-  return date.toLocaleDateString("en-US", {
+  return date.toLocaleDateString(undefined, {
     month: "short",
     day: "numeric",
     year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
   });
 }
 
-function RoleBadge({ role }: { role: string }) {
-  const styles: Record<string, string> = {
-    admin:
-      "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300",
-    viewer: "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300",
-  };
+function initials(name: string): string {
+  const parts = name.replace(/[._-]+/g, " ").trim().split(/\s+/).filter(Boolean);
+  const letters = parts.length > 1 ? parts[0][0] + parts[1][0] : name.slice(0, 2);
+  return letters.toUpperCase();
+}
 
+function RoleBadge({ role }: { role: string }) {
+  const isAdmin = role === "admin";
   return (
-    <span
-      className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-        styles[role] || styles.viewer
-      }`}
-    >
-      {role.charAt(0).toUpperCase() + role.slice(1)}
+    <span className="inline-flex items-center gap-1 rounded-md border border-gray-200 px-1.5 py-0.5 text-[11px] font-medium text-gray-700 dark:border-white/10 dark:text-gray-300">
+      {isAdmin ? (
+        <svg className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6l7-3z" />
+        </svg>
+      ) : null}
+      {isAdmin ? "Admin" : "Viewer"}
     </span>
   );
 }
 
-function StatusBadge({
-  status,
-  disabled,
-}: {
-  status: string;
-  disabled: boolean;
-}) {
-  if (disabled) {
-    return (
-      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
-        Disabled
-      </span>
-    );
-  }
-
-  const styles: Record<string, string> = {
-    verified:
-      "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300",
-    pending:
-      "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300",
-  };
-
-  const labels: Record<string, string> = {
-    verified: "Active",
-    pending: "Pending",
-  };
+function StatusBadge({ status, disabled }: { status: string; disabled: boolean }) {
+  const state = disabled
+    ? { label: "Disabled", dot: "bg-gray-400" }
+    : status === "verified"
+      ? { label: "Active", dot: "bg-emerald-500" }
+      : { label: "Invite pending", dot: "bg-amber-500" };
 
   return (
-    <span
-      className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-        styles[status] || styles.pending
-      }`}
-    >
-      {labels[status] || "Pending"}
+    <span className="inline-flex items-center gap-1.5 text-[13px] text-gray-700 dark:text-gray-300">
+      <span className={`h-1.5 w-1.5 rounded-full ${state.dot}`} aria-hidden="true" />
+      {state.label}
     </span>
   );
 }
@@ -99,14 +83,16 @@ export function UsersTable({
   resendingMemberId,
   currentUserId,
   deletingMemberId,
+  title,
+  subtitle,
 }: UsersTableProps) {
   const { confirm } = useConfirmation();
 
   const handleDelete = async (memberId: string, email: string) => {
     const confirmed = await confirm({
-      title: "Delete user",
-      message: `Are you sure you want to delete ${email}? This action cannot be undone.`,
-      confirmText: "Delete",
+      title: "Remove user",
+      message: `Remove ${email} from your organization? They will lose access immediately.`,
+      confirmText: "Remove",
       cancelText: "Cancel",
       variant: "danger",
     });
@@ -116,133 +102,110 @@ export function UsersTable({
     }
   };
 
+  const header = title ? <CardHeader title={title} subtitle={subtitle} /> : null;
+
   if (!members || members.length === 0) {
     return (
-      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-12 text-center">
-        <svg
-          className="w-12 h-12 text-gray-400 mx-auto mb-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
-          />
-        </svg>
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-          No users found
-        </h3>
-        <p className="text-gray-500 dark:text-gray-400">
-          Add your first team member to get started
-        </p>
-      </div>
+      <Card>
+        {header}
+        <div className="flex flex-col items-center px-6 py-16 text-center">
+          <div className="grid h-11 w-11 place-items-center rounded-full bg-gray-100 dark:bg-white/[0.06]">
+            <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16 19v-1a4 4 0 00-4-4H6a4 4 0 00-4 4v1M9 10a3 3 0 100-6 3 3 0 000 6zm13 9v-1a4 4 0 00-3-3.9M16 4.1a3 3 0 010 5.8" />
+            </svg>
+          </div>
+          <p className="mt-3 text-[14px] font-medium text-gray-900 dark:text-white">No team members yet</p>
+          <p className="mt-1 text-[13px] text-gray-500 dark:text-gray-400">
+            Invite a teammate to give them access.
+          </p>
+        </div>
+      </Card>
     );
   }
 
   return (
-    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden">
+    <Card className="overflow-hidden">
+      {header}
       <div className="overflow-x-auto">
-        <table className="w-full">
+        <table className="w-full min-w-[760px] text-left">
           <thead>
-            <tr className="border-b border-gray-200 dark:border-gray-800">
-              <th className="text-left px-6 py-4 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Name
-              </th>
-              <th className="text-left px-6 py-4 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Email
-              </th>
-              <th className="text-left px-6 py-4 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Role
-              </th>
-              <th className="text-left px-6 py-4 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Status
-              </th>
-              <th className="text-left px-6 py-4 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Last Login
-              </th>
-              <th className="text-right px-6 py-4 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Actions
-              </th>
+            <tr className="border-b border-gray-100 bg-gray-50/60 dark:border-white/[0.06] dark:bg-white/[0.02]">
+              {["Member", "Role", "Status", "Last login", ""].map((column, index) => (
+                <th
+                  key={column || index}
+                  scope="col"
+                  className="whitespace-nowrap px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-gray-500 first:pl-5 last:pr-5 last:text-right dark:text-gray-400"
+                >
+                  {column || <span className="sr-only">Actions</span>}
+                </th>
+              ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
+          <tbody className="divide-y divide-gray-100 dark:divide-white/[0.06]">
             {members.map((member) => {
               const user = member.user;
               const displayName = user.fullName || user.email.split("@")[0];
+              const isSelf = user.id === currentUserId;
 
               return (
                 <tr
                   key={member.id}
-                  className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                  className="transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.03]"
                 >
-                  <td className="px-6 py-5">
+                  <td className="py-3 pl-5 pr-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold">
-                        {displayName.charAt(0).toUpperCase()}
+                      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gray-100 text-[12px] font-semibold text-gray-700 ring-1 ring-gray-200 dark:bg-white/[0.06] dark:text-gray-200 dark:ring-white/10">
+                        {initials(displayName)}
                       </div>
-                      <span className="text-sm font-medium text-gray-900 dark:text-white">
-                        {displayName}
-                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-[13px] font-medium text-gray-900 dark:text-white">
+                          {displayName}
+                          {isSelf ? (
+                            <span className="ml-1.5 text-[12px] font-normal text-gray-400">(you)</span>
+                          ) : null}
+                        </p>
+                        <p className="truncate text-[12px] text-gray-500 dark:text-gray-400">{user.email}</p>
+                      </div>
                     </div>
                   </td>
-                  <td className="px-6 py-5">
-                    <span className="text-sm font-mono text-gray-600 dark:text-gray-300">
-                      {user.email}
-                    </span>
-                  </td>
-                  <td className="px-6 py-5">
+                  <td className="whitespace-nowrap px-4 py-3">
                     <RoleBadge role={member.role} />
                   </td>
-                  <td className="px-6 py-5">
-                    <StatusBadge
-                      status={member.status}
-                      disabled={user.disabled}
-                    />
+                  <td className="whitespace-nowrap px-4 py-3">
+                    <StatusBadge status={member.status} disabled={user.disabled} />
                   </td>
-                  <td className="px-6 py-5">
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      {formatLastLogin(user.lastLogin || null)}
-                    </span>
+                  <td className="whitespace-nowrap px-4 py-3 text-[13px] text-gray-500 dark:text-gray-400">
+                    {formatLastLogin(user.lastLogin || null)}
                   </td>
-                  <td className="px-6 py-5">
-                    <div className="flex items-center justify-end gap-2">
-                      {member.status === "pending" && onResendInvitation && (
+                  <td className="py-3 pl-4 pr-5">
+                    <div className="flex items-center justify-end gap-1">
+                      {member.status === "pending" && onResendInvitation ? (
                         <button
+                          type="button"
                           onClick={() => onResendInvitation(member.id)}
                           disabled={Boolean(resendingMemberId)}
-                          className="px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-blue-900/20 dark:text-blue-300 dark:hover:bg-blue-900/40 transition-colors"
+                          className={BUTTON_GHOST}
                         >
-                          {resendingMemberId === member.id
-                            ? "Sending..."
-                            : "Resend Invite"}
+                          {resendingMemberId === member.id ? "Sending…" : "Resend invite"}
                         </button>
-                      )}
+                      ) : null}
                       <button
+                        type="button"
                         onClick={() => onToggleStatus(user.id)}
-                        className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                          user.disabled
-                            ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/50"
-                            : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
-                        }`}
+                        className={BUTTON_GHOST}
                       >
                         {user.disabled ? "Enable" : "Disable"}
                       </button>
-                      {onDelete && user.id !== currentUserId && (
+                      {onDelete && !isSelf ? (
                         <button
-                          onClick={() =>
-                            void handleDelete(member.id, user.email)
-                          }
+                          type="button"
+                          onClick={() => void handleDelete(member.id, user.email)}
                           disabled={Boolean(deletingMemberId)}
-                          className="px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+                          className={`${BUTTON_GHOST} text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-500/10 dark:hover:text-red-300`}
                         >
-                          {deletingMemberId === member.id
-                            ? "Deleting..."
-                            : "Delete"}
+                          {deletingMemberId === member.id ? "Removing…" : "Remove"}
                         </button>
-                      )}
+                      ) : null}
                     </div>
                   </td>
                 </tr>
@@ -251,6 +214,6 @@ export function UsersTable({
           </tbody>
         </table>
       </div>
-    </div>
+    </Card>
   );
 }

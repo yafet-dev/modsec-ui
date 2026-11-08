@@ -1,8 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
+import {
+  BUTTON_PRIMARY,
+  BUTTON_SECONDARY,
+  CARD_CLASS,
+  INPUT_CLASS,
+} from "@/components/dashboard/dashboardUi";
 
 type UserRole = "admin" | "viewer";
 
@@ -15,49 +19,52 @@ interface AddUserModalProps {
   isLoading?: boolean;
 }
 
-export function AddUserModal({
-  isOpen,
+const ROLES: Array<{ value: UserRole; title: string; description: string }> = [
+  { value: "viewer", title: "Viewer", description: "Read-only access to the dashboard and logs" },
+  { value: "admin", title: "Admin", description: "Full access to all features and settings" },
+];
+
+/** The dialog mounts only while open, so its fields start empty every time. */
+export function AddUserModal(props: AddUserModalProps) {
+  if (!props.isOpen) return null;
+  return <InviteDialog {...props} />;
+}
+
+function InviteDialog({
   onClose,
   onAdd,
   existingEmails,
   canAddAdmin: canAddAdminProp,
   isLoading = false,
 }: AddUserModalProps) {
-  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<UserRole>("viewer");
-  const [errors, setErrors] = useState<{ name?: string; email?: string; role?: string }>({});
+  const [errors, setErrors] = useState<{ email?: string; role?: string }>({});
 
   useEffect(() => {
-    if (!isOpen) {
-      setName("");
-      setEmail("");
-      setRole("viewer");
-      setErrors({});
-    }
-  }, [isOpen]);
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !isLoading) onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [isLoading, onClose]);
 
-  const validateEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
+  const validateEmail = (value: string): boolean => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const newErrors: typeof errors = {};
 
-    // Validate email
     if (!email.trim()) {
       newErrors.email = "Email is required";
-    } else if (!validateEmail(email)) {
-      newErrors.email = "Invalid email format";
-    } else if (existingEmails.some((e) => e.toLowerCase() === email.toLowerCase())) {
-      newErrors.email = "User with this email already exists";
+    } else if (!validateEmail(email.trim())) {
+      newErrors.email = "Enter a valid email address";
+    } else if (existingEmails.some((existing) => existing.toLowerCase() === email.trim().toLowerCase())) {
+      newErrors.email = "This person is already a member";
     }
 
-    // Validate role
     if (role === "admin" && !canAddAdminProp) {
-      newErrors.role = "Maximum of 3 admins allowed";
+      newErrors.role = "All 3 admin seats are in use";
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -65,150 +72,132 @@ export function AddUserModal({
       return;
     }
 
-    onAdd({
-      email: email.trim().toLowerCase(),
-      role,
-    });
+    onAdd({ email: email.trim().toLowerCase(), role });
   };
-
-  if (!isOpen) return null;
 
   return (
     <>
-      {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/50 z-[50] transition-opacity"
-        onClick={onClose}
+        className="fixed inset-0 z-[50] bg-black/40 backdrop-blur-[2px]"
+        onClick={isLoading ? undefined : onClose}
+        aria-hidden="true"
       />
 
-      {/* Modal */}
       <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
         <div
-          className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md border border-gray-200 dark:border-gray-800 animate-scale-in"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="invite-user-title"
+          className={`${CARD_CLASS} animate-scale-in w-full max-w-md shadow-2xl`}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Header */}
-          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-              Add New User
-            </h2>
+          <div className="flex items-start justify-between gap-4 border-b border-gray-100 px-5 py-4 dark:border-white/[0.06]">
+            <div>
+              <h2 id="invite-user-title" className="text-[15px] font-semibold text-gray-900 dark:text-white">
+                Invite a team member
+              </h2>
+              <p className="mt-0.5 text-[13px] text-gray-500 dark:text-gray-400">
+                They will get an email with a link to join.
+              </p>
+            </div>
             <button
+              type="button"
               onClick={onClose}
-              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-              aria-label="Close modal"
+              disabled={isLoading}
+              className="grid h-8 w-8 shrink-0 cursor-pointer place-items-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 disabled:cursor-not-allowed dark:text-gray-400 dark:hover:bg-white/[0.06] dark:hover:text-white"
+              aria-label="Close"
             >
-              <svg
-                className="w-5 h-5 text-gray-500 dark:text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           </div>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
-            {/* Email Input */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Email
-              </label>
-              <Input
-                type="email"
-                value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                  if (errors.email) setErrors({ ...errors, email: undefined });
-                }}
-                placeholder="user@example.com"
-                className={errors.email ? "border-red-500" : ""}
-              />
-              {errors.email && (
-                <p className="mt-1 text-xs text-red-600 dark:text-red-400">
-                  {errors.email}
-                </p>
-              )}
-            </div>
-
-            {/* Role Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Role
-              </label>
-              <div className="space-y-2">
-                <label className="flex items-center gap-3 p-3 border border-gray-200 dark:border-gray-800 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                  <input
-                    type="radio"
-                    name="role"
-                    value="admin"
-                    checked={role === "admin"}
-                    onChange={(e) => {
-                      setRole(e.target.value as UserRole);
-                      if (errors.role) setErrors({ ...errors, role: undefined });
-                    }}
-                    disabled={!canAddAdminProp}
-                    className="w-4 h-4 text-blue-600 focus:ring-blue-500"
-                  />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-gray-900 dark:text-white">
-                        Admin
-                      </span>
-                      {!canAddAdminProp && (
-                        <span className="text-xs text-red-600 dark:text-red-400">
-                          (Limit reached)
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Full access to all features and settings
-                    </p>
-                  </div>
+          <form onSubmit={handleSubmit} noValidate>
+            <div className="space-y-5 px-5 py-5">
+              <div>
+                <label htmlFor="invite-email" className="mb-1.5 block text-[13px] font-medium text-gray-700 dark:text-gray-300">
+                  Email address
                 </label>
-                <label className="flex items-center gap-3 p-3 border border-gray-200 dark:border-gray-800 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                  <input
-                    type="radio"
-                    name="role"
-                    value="viewer"
-                    checked={role === "viewer"}
-                    onChange={(e) => {
-                      setRole(e.target.value as UserRole);
-                      if (errors.role) setErrors({ ...errors, role: undefined });
-                    }}
-                    className="w-4 h-4 text-blue-600 focus:ring-blue-500"
-                  />
-                  <div className="flex-1">
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">
-                      Viewer
-                    </span>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Read-only access to dashboard and logs
-                    </p>
-                  </div>
-                </label>
+                <input
+                  id="invite-email"
+                  type="email"
+                  autoFocus
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (errors.email) setErrors({ ...errors, email: undefined });
+                  }}
+                  placeholder="name@company.com"
+                  aria-invalid={Boolean(errors.email)}
+                  className={`${INPUT_CLASS} ${errors.email ? "border-red-400 dark:border-red-500/70" : ""}`}
+                />
+                {errors.email ? (
+                  <p className="mt-1.5 text-[12px] text-red-600 dark:text-red-400">{errors.email}</p>
+                ) : null}
               </div>
-              {errors.role && (
-                <p className="mt-1 text-xs text-red-600 dark:text-red-400">
-                  {errors.role}
-                </p>
-              )}
+
+              <fieldset>
+                <legend className="mb-1.5 block text-[13px] font-medium text-gray-700 dark:text-gray-300">
+                  Role
+                </legend>
+                <div className="grid gap-2">
+                  {ROLES.map((option) => {
+                    const disabled = option.value === "admin" && !canAddAdminProp;
+                    const selected = role === option.value;
+                    return (
+                      <label
+                        key={option.value}
+                        className={[
+                          "flex items-start gap-3 rounded-xl border p-3 transition-colors",
+                          disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer",
+                          selected
+                            ? "border-gray-900 bg-gray-50 dark:border-white/60 dark:bg-white/[0.04]"
+                            : "border-gray-200 hover:border-gray-300 dark:border-white/10 dark:hover:border-white/20",
+                        ].join(" ")}
+                      >
+                        <input
+                          type="radio"
+                          name="role"
+                          value={option.value}
+                          checked={selected}
+                          disabled={disabled}
+                          onChange={() => {
+                            setRole(option.value);
+                            if (errors.role) setErrors({ ...errors, role: undefined });
+                          }}
+                          className="mt-0.5 h-4 w-4 accent-gray-900 dark:accent-white"
+                        />
+                        <span className="min-w-0">
+                          <span className="flex items-center gap-2 text-[13px] font-medium text-gray-900 dark:text-white">
+                            {option.title}
+                            {disabled ? (
+                              <span className="text-[11px] font-normal text-gray-500 dark:text-gray-400">
+                                All 3 seats in use
+                              </span>
+                            ) : null}
+                          </span>
+                          <span className="mt-0.5 block text-[12px] text-gray-500 dark:text-gray-400">
+                            {option.description}
+                          </span>
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+                {errors.role ? (
+                  <p className="mt-1.5 text-[12px] text-red-600 dark:text-red-400">{errors.role}</p>
+                ) : null}
+              </fieldset>
             </div>
 
-            {/* Actions */}
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-800">
-              <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
+            <div className="flex items-center justify-end gap-2 border-t border-gray-100 px-5 py-4 dark:border-white/[0.06]">
+              <button type="button" onClick={onClose} disabled={isLoading} className={BUTTON_SECONDARY}>
                 Cancel
-              </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? "Sending..." : "Add User"}
-              </Button>
+              </button>
+              <button type="submit" disabled={isLoading} className={BUTTON_PRIMARY}>
+                {isLoading ? "Sending invite…" : "Send invite"}
+              </button>
             </div>
           </form>
         </div>
@@ -217,7 +206,7 @@ export function AddUserModal({
       <style jsx>{`
         @keyframes scale-in {
           from {
-            transform: scale(0.95);
+            transform: scale(0.97);
             opacity: 0;
           }
           to {
@@ -226,10 +215,9 @@ export function AddUserModal({
           }
         }
         .animate-scale-in {
-          animation: scale-in 0.2s ease-out;
+          animation: scale-in 0.15s ease-out;
         }
       `}</style>
     </>
   );
 }
-

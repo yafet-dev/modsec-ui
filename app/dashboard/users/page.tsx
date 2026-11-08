@@ -5,10 +5,15 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useRole } from "@/components/providers/RoleProvider";
 import { LayoutWrapper } from "@/components/ui/LayoutWrapper";
-import { Button } from "@/components/ui/Button";
 import { Section } from "@/components/ui/Section";
 import { UsersTable } from "@/components/users/UsersTable";
 import { AddUserModal } from "@/components/users/AddUserModal";
+import {
+  BUTTON_PRIMARY,
+  Card,
+  MiniStat,
+  PageHeader,
+} from "@/components/dashboard/dashboardUi";
 import {
   useMyOrganizationMembers,
   useToggleUserDisabled,
@@ -18,16 +23,14 @@ import {
 } from "@/lib/api/hooks/useOrganizationMembers";
 import toast from "react-hot-toast";
 
+const ADMIN_SEATS = 3;
+
 export default function UsersPage() {
   const { isAuthenticated, isAuthLoading, user } = useAuth();
   const { currentRole } = useRole();
   const router = useRouter();
 
-  const {
-    data: orgData,
-    isLoading,
-    error,
-  } = useMyOrganizationMembers();
+  const { data: orgData, isLoading, error } = useMyOrganizationMembers();
   const toggleDisabled = useToggleUserDisabled();
   const inviteUser = useInviteUser();
   const resendInvitation = useResendInvitation();
@@ -44,10 +47,7 @@ export default function UsersPage() {
     }
   }, [isAuthLoading, isAuthenticated, currentRole, router]);
 
-  const handleAddUser = async (newUser: {
-    email: string;
-    role: string;
-  }) => {
+  const handleAddUser = async (newUser: { email: string; role: string }) => {
     if (!orgData?.organization.id) {
       toast.error("Organization not found");
       return;
@@ -66,18 +66,6 @@ export default function UsersPage() {
     );
   };
 
-  const handleDeleteUser = (memberId: string) => {
-    deleteMember.mutate(memberId);
-  };
-
-  const handleToggleUserStatus = (userId: string) => {
-    toggleDisabled.mutate(userId);
-  };
-
-  const handleResendInvitation = (memberId: string) => {
-    resendInvitation.mutate(memberId);
-  };
-
   if (isAuthLoading || !isAuthenticated || currentRole === "super_admin") {
     return null;
   }
@@ -86,114 +74,123 @@ export default function UsersPage() {
   const adminCount = members.filter(
     (m) => m.role === "admin" && !m.user.disabled && m.status === "verified"
   ).length;
-  const canAddMoreAdmins = adminCount < 3;
+  const activeCount = members.filter((m) => m.status === "verified" && !m.user.disabled).length;
+  const pendingCount = members.filter((m) => m.status === "pending").length;
+  const canAddMoreAdmins = adminCount < ADMIN_SEATS;
   const canAddUsers = currentRole !== "viewer";
-
-  if (isLoading) {
-    return (
-      <LayoutWrapper>
-        <main className="py-8">
-          <Section>
-            <div className="text-center py-12">
-              <p className="text-gray-500 dark:text-gray-400">
-                Loading users...
-              </p>
-            </div>
-          </Section>
-        </main>
-      </LayoutWrapper>
-    );
-  }
-
-  if (error) {
-    return (
-      <LayoutWrapper>
-        <main className="py-8">
-          <Section>
-            <div className="text-center py-12">
-              <p className="text-red-500 dark:text-red-400">
-                Failed to load users
-              </p>
-            </div>
-          </Section>
-        </main>
-      </LayoutWrapper>
-    );
-  }
 
   return (
     <LayoutWrapper>
-      <main className="py-8">
+      <main className="py-6 sm:py-8">
         <Section>
-          <div className="mb-8 flex items-center justify-between">
-            <div>
-              <h1 className="text-4xl font-semibold text-gray-900 dark:text-white mb-2">
-                Users
-              </h1>
-              <p className="text-lg text-gray-600 dark:text-gray-400">
-                Manage team members and their access
-                {orgData?.organization.name && (
-                  <span className="ml-2 text-blue-500">
-                    — {orgData.organization.name}
+          <PageHeader
+            eyebrow="Access"
+            title="Team"
+            description={
+              orgData?.organization.name ? (
+                <>
+                  Manage who can access{" "}
+                  <span className="font-medium text-gray-700 dark:text-gray-200">
+                    {orgData.organization.name}
                   </span>
-                )}
-              </p>
-            </div>
-            {canAddUsers && (
-              <Button onClick={() => setIsAddModalOpen(true)}>Add User</Button>
-            )}
-          </div>
-
-          {/* Admin Limit Info */}
-          <div className="mb-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
-            <div className="flex items-center gap-2">
-              <svg
-                className="w-5 h-5 text-blue-600 dark:text-blue-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <p className="text-sm text-blue-800 dark:text-blue-300">
-                <span className="font-semibold">{adminCount} of 3</span> admin
-                slots used.{" "}
-                {canAddMoreAdmins
-                  ? "You can add more admins."
-                  : "Admin limit reached."}
-              </p>
-            </div>
-          </div>
-
-          {/* Users Table */}
-          <UsersTable
-            members={members}
-            onDelete={
-              currentRole === "admin" ? handleDeleteUser : undefined
+                </>
+              ) : (
+                "Manage team members and their access"
+              )
             }
-            onToggleStatus={handleToggleUserStatus}
-            currentUserId={user?.id}
-            deletingMemberId={
-              deleteMember.isPending ? deleteMember.variables : undefined
-            }
-            onResendInvitation={
-              currentRole === "admin" ? handleResendInvitation : undefined
-            }
-            resendingMemberId={
-              resendInvitation.isPending
-                ? resendInvitation.variables
-                : undefined
+            actions={
+              canAddUsers ? (
+                <button
+                  type="button"
+                  onClick={() => setIsAddModalOpen(true)}
+                  disabled={isLoading || Boolean(error)}
+                  className={BUTTON_PRIMARY}
+                >
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
+                  </svg>
+                  Invite user
+                </button>
+              ) : undefined
             }
           />
+
+          <div className="mt-6 border-t border-gray-200/80 pt-6 dark:border-white/[0.08]">
+            {isLoading ? (
+              <div className="space-y-4" aria-busy="true">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                  {[0, 1, 2].map((i) => (
+                    <Card key={i} className="h-[104px] animate-pulse" />
+                  ))}
+                </div>
+                <Card className="h-72 animate-pulse" />
+              </div>
+            ) : error ? (
+              <Card className="px-6 py-12 text-center">
+                <p className="text-[14px] font-medium text-gray-900 dark:text-white">
+                  Team members could not be loaded
+                </p>
+                <p className="mt-1 text-[13px] text-gray-500 dark:text-gray-400">
+                  Refresh the page to try again.
+                </p>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                  <MiniStat
+                    label="Members"
+                    value={members.length.toLocaleString()}
+                    sub={`${activeCount} active`}
+                  />
+                  <MiniStat
+                    label="Admin seats"
+                    value={
+                      <>
+                        {adminCount}
+                        <span className="text-[15px] font-medium text-gray-400"> / {ADMIN_SEATS}</span>
+                      </>
+                    }
+                    sub={canAddMoreAdmins ? `${ADMIN_SEATS - adminCount} available` : "All seats in use"}
+                  >
+                    <div className="mt-2 flex gap-1" aria-hidden="true">
+                      {Array.from({ length: ADMIN_SEATS }).map((_, i) => (
+                        <span
+                          key={i}
+                          className={`h-1.5 flex-1 rounded-full ${
+                            i < adminCount
+                              ? "bg-gray-900 dark:bg-white"
+                              : "bg-gray-100 dark:bg-white/[0.08]"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </MiniStat>
+                  <MiniStat
+                    label="Pending invites"
+                    value={pendingCount.toLocaleString()}
+                    sub={pendingCount ? "Waiting to be accepted" : "No open invitations"}
+                  />
+                </div>
+
+                <UsersTable
+                  title="Members"
+                  subtitle={`${members.length} ${members.length === 1 ? "person" : "people"} in this organization`}
+                  members={members}
+                  onDelete={currentRole === "admin" ? (id) => deleteMember.mutate(id) : undefined}
+                  onToggleStatus={(userId) => toggleDisabled.mutate(userId)}
+                  currentUserId={user?.id}
+                  deletingMemberId={deleteMember.isPending ? deleteMember.variables : undefined}
+                  onResendInvitation={
+                    currentRole === "admin" ? (id) => resendInvitation.mutate(id) : undefined
+                  }
+                  resendingMemberId={resendInvitation.isPending ? resendInvitation.variables : undefined}
+                />
+              </div>
+            )}
+          </div>
         </Section>
       </main>
 
-      {/* Add User Modal */}
       <AddUserModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}

@@ -2,8 +2,8 @@
 
 import { useMemo, useState, useEffect } from "react";
 import ReactCountryFlag from "react-country-flag";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
+import { DashButton as Button } from "@/components/dashboard/dashboardUi";
+import { DashInput as Input } from "@/components/dashboard/dashboardUi";
 import { useConfirmation } from "@/components/providers/ConfirmationProvider";
 import { useIPBans, useCreateIPBan, useDeleteIPBan } from "@/lib/api/hooks/useIPBan";
 import { IPBan } from "@/lib/api/ipBan";
@@ -148,20 +148,20 @@ export function IPBanList({ domains, organizationId }: IPBanListProps) {
       {/* Apple-ish header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-xs tracking-wide text-black/60 dark:text-white/60">
+          <p className="text-xs tracking-wide text-gray-500 dark:text-gray-400">
             Access Control
           </p>
-          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-[#1d1d1f] dark:text-white">
+          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-gray-900 dark:text-white">
             IP Ban List
           </h2>
-          <p className="mt-2 text-sm text-black/60 dark:text-white/60">
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
             Manage banned IP addresses and their restrictions per domain.
           </p>
         </div>
 
         <button
           onClick={() => setShowAddForm(true)}
-          className="inline-flex items-center justify-center gap-2 rounded-full bg-[#0071e3] px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:brightness-95 active:brightness-90"
+          className="inline-flex items-center justify-center gap-2 cursor-pointer rounded-lg bg-gray-900 dark:bg-white dark:text-gray-900 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:brightness-95 active:brightness-90"
         >
           <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -182,16 +182,16 @@ export function IPBanList({ domains, organizationId }: IPBanListProps) {
           }}
         >
           <div
-            className="w-full max-w-md overflow-hidden rounded-3xl border border-black/10 bg-white/80 shadow-[0_20px_60px_rgba(0,0,0,0.25)] backdrop-blur dark:border-white/10 dark:bg-white/[0.06]"
+            className="w-full max-w-md overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-white/[0.08] dark:bg-[#111113]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal header */}
             <div className="flex items-center justify-between px-6 py-5">
               <div>
-                <h3 className="text-lg font-semibold tracking-tight text-[#1d1d1f] dark:text-white">
+                <h3 className="text-lg font-semibold tracking-tight text-gray-900 dark:text-white">
                   Add IP Ban
                 </h3>
-                <p className="mt-1 text-xs text-black/60 dark:text-white/60">
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                   Block an IP across all domains or a single domain.
                 </p>
               </div>
@@ -204,7 +204,7 @@ export function IPBanList({ domains, organizationId }: IPBanListProps) {
                   }
                 }}
                 disabled={createMutation.isPending}
-                className="grid h-9 w-9 place-items-center rounded-full bg-black/5 text-black/60 transition hover:bg-black/10 dark:bg-white/10 dark:text-white/70 dark:hover:bg-white/15 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="grid h-9 w-9 place-items-center rounded-full bg-black/5 text-gray-500 transition hover:bg-black/10 dark:bg-white/10 dark:text-gray-300 dark:hover:bg-white/15 disabled:opacity-50 disabled:cursor-not-allowed"
                 aria-label="Close"
               >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -213,7 +213,7 @@ export function IPBanList({ domains, organizationId }: IPBanListProps) {
               </button>
             </div>
 
-            <div className="border-t border-black/5 px-6 py-6 dark:border-white/10">
+            <div className="border-t border-gray-200/80 px-6 py-6 dark:border-white/10">
               <div className="space-y-4">
                 <div>
                   <Input
@@ -225,7 +225,7 @@ export function IPBanList({ domains, organizationId }: IPBanListProps) {
                     disabled={createMutation.isPending}
                   />
                   {isDetectingCountry && (
-                    <p className="mt-1 text-xs text-black/60 dark:text-white/60">
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                       Detecting country...
                     </p>
                   )}
@@ -237,7 +237,7 @@ export function IPBanList({ domains, organizationId }: IPBanListProps) {
                         style={{ width: "16px", height: "16px", borderRadius: "3px" }}
                         title={detectedCountry.name}
                       />
-                      <span className="text-xs text-black/70 dark:text-white/70">
+                      <span className="text-xs text-gray-700 dark:text-gray-300">
                         {detectedCountry.name}
                       </span>
                     </div>
@@ -245,20 +245,20 @@ export function IPBanList({ domains, organizationId }: IPBanListProps) {
                 </div>
 
                 <div className="w-full">
-                  <label className="mb-2 block text-sm font-medium text-black/70 dark:text-white/70">
+                  <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                     Domain
                   </label>
                   <select
                     value={newDomain}
                     onChange={(e) => setNewDomain(e.target.value)}
                     disabled={createMutation.isPending}
-                    className="w-full rounded-xl border border-black/10 bg-white/70 px-4 py-3 text-sm text-[#1d1d1f] shadow-sm outline-none backdrop-blur transition focus:border-black/20 focus:ring-2 focus:ring-black/10 disabled:opacity-50 disabled:cursor-not-allowed dark:border-white/10 dark:bg-[#0f0f12] dark:text-white dark:focus:border-white/20 dark:focus:ring-white/10"
+                    className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm outline-none transition focus:border-black/20 focus:ring-2 focus:ring-black/10 disabled:opacity-50 disabled:cursor-not-allowed dark:border-white/10 dark:bg-[#0f0f12] dark:text-white dark:focus:border-white/20 dark:focus:ring-white/10"
                   >
                     {domainOptions.map((d) => (
                       <option
                         key={d}
                         value={d}
-                        className="bg-white text-[#1d1d1f] dark:bg-[#0f0f12] dark:text-white"
+                        className="bg-white text-gray-900 dark:bg-[#0f0f12] dark:text-white"
                       >
                         {d === "All" ? "All Domains" : d}
                       </option>
@@ -285,14 +285,14 @@ export function IPBanList({ domains, organizationId }: IPBanListProps) {
                     }
                   }}
                   disabled={createMutation.isPending}
-                  className="flex-1 rounded-full border border-black/10 bg-white/60 px-4 py-2.5 text-sm font-medium text-black/70 shadow-sm backdrop-blur transition hover:bg-white/80 disabled:opacity-50 disabled:cursor-not-allowed dark:border-white/10 dark:bg-white/5 dark:text-white/80 dark:hover:bg-white/10"
+                  className="flex-1 cursor-pointer rounded-lg border border-gray-200 bg-gray-50/70 px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-white/80 disabled:opacity-50 disabled:cursor-not-allowed dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-200 dark:hover:bg-white/10"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleAddIP}
                   disabled={createMutation.isPending || !newIP.trim()}
-                  className="flex-1 rounded-full bg-[#0071e3] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:brightness-95 active:brightness-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 cursor-pointer rounded-lg bg-gray-900 dark:bg-white dark:text-gray-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:brightness-95 active:brightness-90 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {createMutation.isPending ? "Banning..." : "Add Ban"}
                 </button>
@@ -307,25 +307,25 @@ export function IPBanList({ domains, organizationId }: IPBanListProps) {
         {isLoading ? (
           <div className="p-12 text-center">
             <div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-full bg-black/5 dark:bg-white/10">
-              <svg className="h-6 w-6 animate-spin text-black/40 dark:text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-6 w-6 animate-spin text-gray-400 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
             </div>
-            <h3 className="text-lg font-semibold text-[#1d1d1f] dark:text-white">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
               Loading...
             </h3>
           </div>
         ) : ipBans.length === 0 ? (
           <div className="p-12 text-center">
             <div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-full bg-black/5 dark:bg-white/10">
-              <svg className="h-6 w-6 text-black/40 dark:text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-6 w-6 text-gray-400 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
               </svg>
             </div>
-            <h3 className="text-lg font-semibold text-[#1d1d1f] dark:text-white">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
               No IP Bans
             </h3>
-            <p className="mt-2 text-sm text-black/60 dark:text-white/60">
+            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
               No IP addresses are currently banned.
             </p>
           </div>
@@ -345,7 +345,7 @@ export function IPBanList({ domains, organizationId }: IPBanListProps) {
                   <div className="min-w-0 flex-1">
                     {/* Top line */}
                     <div className="flex flex-wrap items-center gap-3">
-                      <span className="font-mono text-sm font-semibold text-[#1d1d1f] dark:text-white">
+                      <span className="font-mono text-sm font-semibold text-gray-900 dark:text-white">
                         {ban.ip}
                       </span>
 
@@ -355,15 +355,15 @@ export function IPBanList({ domains, organizationId }: IPBanListProps) {
                     </div>
 
                     {/* Sub line */}
-                    <div className="mt-2 flex flex-col gap-1 text-xs text-black/60 dark:text-white/60">
+                    <div className="mt-2 flex flex-col gap-1 text-xs text-gray-500 dark:text-gray-400">
                       <p className="line-clamp-2">
-                        <span className="font-medium text-black/70 dark:text-white/70">
+                        <span className="font-medium text-gray-700 dark:text-gray-300">
                           Reason:
                         </span>{" "}
                         {ban.reason || "Manually added"}
                       </p>
                       <p>
-                        <span className="font-medium text-black/70 dark:text-white/70">
+                        <span className="font-medium text-gray-700 dark:text-gray-300">
                           Banned:
                         </span>{" "}
                         {formatDate(ban.bannedAt)}
@@ -375,7 +375,7 @@ export function IPBanList({ domains, organizationId }: IPBanListProps) {
                     <button
                       onClick={() => handleDeleteIP(ban.id, ban.ip)}
                       disabled={removingId === ban.id || (removingId !== null && removingId !== ban.id)}
-                      className="inline-flex items-center gap-2 rounded-full border border-red-500/20 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-600 transition hover:bg-red-500/15 disabled:opacity-50 disabled:cursor-not-allowed dark:border-red-400/20 dark:bg-red-400/10 dark:text-red-300"
+                      className="inline-flex items-center gap-2 cursor-pointer rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-600 transition hover:bg-red-500/15 disabled:opacity-50 disabled:cursor-not-allowed dark:border-red-400/20 dark:bg-red-400/10 dark:text-red-300"
                     >
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -392,16 +392,16 @@ export function IPBanList({ domains, organizationId }: IPBanListProps) {
 
       {/* Info footer (Apple-ish callout) */}
       {ipBans.length > 0 && (
-        <div className="rounded-2xl border border-black/10 bg-white/60 p-5 text-sm text-black/60 backdrop-blur dark:border-white/10 dark:bg-white/[0.06] dark:text-white/60">
+        <div className="rounded-2xl border border-gray-200 bg-gray-50/70 p-5 text-sm text-gray-500 dark:border-white/10 dark:bg-white/[0.06] dark:text-gray-400">
           <div className="flex items-start gap-3">
             <div className="mt-0.5 grid h-8 w-8 place-items-center rounded-full bg-black/5 dark:bg-white/10">
-              <svg className="h-5 w-5 text-black/40 dark:text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-5 w-5 text-gray-400 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
 
             <div>
-              <p className="font-medium text-black/70 dark:text-white/70">
+              <p className="font-medium text-gray-700 dark:text-gray-300">
                 About IP bans
               </p>
               <p className="mt-1 text-xs leading-5">
@@ -428,8 +428,8 @@ function GlassCard({
   return (
     <div
       className={[
-        "rounded-2xl border border-black/10 bg-white/70 shadow-[0_1px_0_rgba(0,0,0,0.04),0_10px_30px_rgba(0,0,0,0.06)] backdrop-blur",
-        "dark:border-white/10 dark:bg-white/[0.06] dark:shadow-[0_1px_0_rgba(255,255,255,0.06),0_18px_40px_rgba(0,0,0,0.45)]",
+        "rounded-2xl border border-gray-200/80 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]",
+        "dark:border-white/[0.08] dark:bg-[#111113] dark:shadow-none",
         className,
       ].join(" ")}
     >
@@ -444,8 +444,8 @@ function DomainPill({ value }: { value: string }) {
     <span
       className={[
         "inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] font-medium",
-        "bg-white/60 text-black/70 border-black/10",
-        "dark:bg-white/[0.06] dark:text-white/70 dark:border-white/10",
+        "bg-gray-50/70 text-gray-700 border-gray-200",
+        "dark:bg-white/[0.06] dark:text-gray-300 dark:border-white/10",
       ].join(" ")}
     >
       <span className={`h-1.5 w-1.5 rounded-full ${isAll ? "bg-[#7c3aed]" : "bg-black/30 dark:bg-white/30"}`} />
@@ -460,8 +460,8 @@ function CountryPill({ code, name }: { code: string; name: string }) {
     <span
       className={[
         "inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] font-medium",
-        "bg-white/60 text-black/70 border-black/10",
-        "dark:bg-white/[0.06] dark:text-white/70 dark:border-white/10",
+        "bg-gray-50/70 text-gray-700 border-gray-200",
+        "dark:bg-white/[0.06] dark:text-gray-300 dark:border-white/10",
       ].join(" ")}
     >
       {hasCountry ? (
@@ -472,7 +472,7 @@ function CountryPill({ code, name }: { code: string; name: string }) {
           title={name}
         />
       ) : (
-        <span className="grid h-4 w-4 place-items-center rounded bg-black/10 text-[10px] text-black/60 dark:bg-white/10 dark:text-white/60">
+        <span className="grid h-4 w-4 place-items-center rounded bg-black/10 text-[10px] text-gray-500 dark:bg-white/10 dark:text-gray-400">
           ?
         </span>
       )}

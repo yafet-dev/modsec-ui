@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
+import { DashButton as Button } from "@/components/dashboard/dashboardUi";
+import { DashInput as Input } from "@/components/dashboard/dashboardUi";
 import {
   useNotificationSettings,
   useCreateNotificationSettings,
@@ -38,14 +38,14 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-3xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur-xl shadow-[0_1px_0_rgba(0,0,0,0.04)]">
-      <div className="flex items-start justify-between gap-4 px-6 py-5 border-b border-black/5 dark:border-white/10">
+    <section className="rounded-2xl border border-gray-200/80 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)] dark:border-white/[0.08] dark:bg-[#111113] dark:shadow-none">
+      <div className="flex items-start justify-between gap-4 px-6 py-5 border-b border-gray-200/80 dark:border-white/10">
         <div>
-          <h3 className="text-[15px] font-semibold tracking-[-0.01em] text-zinc-900 dark:text-zinc-100">
+          <h3 className="text-[15px] font-semibold tracking-[-0.01em] text-gray-900 dark:text-gray-100">
             {title}
           </h3>
           {description ? (
-            <p className="mt-1 text-[13px] leading-5 text-zinc-500 dark:text-zinc-400">
+            <p className="mt-1 text-[13px] leading-5 text-gray-500 dark:text-gray-400">
               {description}
             </p>
           ) : null}
@@ -73,24 +73,24 @@ function TileButton({
   onClick: () => void;
 }) {
   const activeBorder =
-    "border-zinc-900/20 dark:border-white/20 shadow-[0_10px_30px_rgba(0,0,0,0.06)]";
+    "border-gray-900/20 dark:border-white/20 shadow-[0_10px_30px_rgba(0,0,0,0.06)]";
   const idleBorder =
-    "border-black/5 dark:border-white/10 hover:border-zinc-900/15 dark:hover:border-white/15";
+    "border-gray-200/80 dark:border-white/10 hover:border-gray-900/15 dark:hover:border-white/15";
 
   const badge =
     tint === "green"
       ? active
         ? "bg-emerald-500"
-        : "bg-zinc-200 dark:bg-zinc-700"
+        : "bg-gray-200 dark:bg-gray-700"
       : active
-      ? "bg-zinc-900 dark:bg-zinc-100"
-      : "bg-zinc-200 dark:bg-zinc-700";
+      ? "bg-gray-900 dark:bg-gray-100"
+      : "bg-gray-200 dark:bg-gray-700";
 
   const badgeIcon =
     tint === "green"
       ? "text-white"
       : active
-      ? "text-white dark:text-zinc-900"
+      ? "text-white dark:text-gray-900"
       : "text-white";
 
   return (
@@ -98,8 +98,8 @@ function TileButton({
       type="button"
       onClick={onClick}
       className={[
-        "w-full text-left rounded-3xl border transition-all",
-        "p-5 bg-white/70 dark:bg-white/5 backdrop-blur",
+        "w-full text-left rounded-2xl border transition-all",
+        "p-5 bg-white dark:bg-white/[0.03] ",
         active ? activeBorder : idleBorder,
       ].join(" ")}
     >
@@ -108,10 +108,10 @@ function TileButton({
           <div className={badgeIcon}>{icon}</div>
         </div>
         <div className="flex-1">
-          <div className="text-[14px] font-semibold tracking-[-0.01em] text-zinc-900 dark:text-zinc-100">
+          <div className="text-[14px] font-semibold tracking-[-0.01em] text-gray-900 dark:text-gray-100">
             {title}
           </div>
-          <div className="mt-1 text-[13px] leading-5 text-zinc-500 dark:text-zinc-400">
+          <div className="mt-1 text-[13px] leading-5 text-gray-500 dark:text-gray-400">
             {subtitle}
           </div>
         </div>
@@ -119,14 +119,14 @@ function TileButton({
         <div
           className={[
             "mt-1 h-5 w-5 rounded-full border flex items-center justify-center transition-colors",
-            active ? "border-zinc-900 dark:border-zinc-100" : "border-zinc-300 dark:border-zinc-600",
+            active ? "border-gray-900 dark:border-gray-100" : "border-gray-300 dark:border-gray-600",
           ].join(" ")}
           aria-hidden="true"
         >
           <div
             className={[
               "h-2.5 w-2.5 rounded-full transition-opacity",
-              active ? "bg-zinc-900 dark:bg-zinc-100 opacity-100" : "opacity-0",
+              active ? "bg-gray-900 dark:bg-gray-100 opacity-100" : "opacity-0",
             ].join(" ")}
           />
         </div>
@@ -152,33 +152,33 @@ function RadioPill({
       onClick={onSelect}
       className={[
         "w-full rounded-2xl border px-4 py-4 text-left transition-all",
-        "bg-white/70 dark:bg-white/5 backdrop-blur",
+        "bg-white dark:bg-white/[0.03] ",
         active
-          ? "border-zinc-900/20 dark:border-white/20 shadow-[0_10px_30px_rgba(0,0,0,0.06)]"
-          : "border-black/5 dark:border-white/10 hover:border-zinc-900/15 dark:hover:border-white/15",
+          ? "border-gray-900/20 dark:border-white/20 shadow-[0_10px_30px_rgba(0,0,0,0.06)]"
+          : "border-gray-200/80 dark:border-white/10 hover:border-gray-900/15 dark:hover:border-white/15",
       ].join(" ")}
     >
       <div className="flex items-start gap-4">
         <span
           className={[
             "mt-0.5 h-5 w-5 rounded-full border flex items-center justify-center",
-            active ? "border-zinc-900 dark:border-zinc-100" : "border-zinc-300 dark:border-zinc-600",
+            active ? "border-gray-900 dark:border-gray-100" : "border-gray-300 dark:border-gray-600",
           ].join(" ")}
           aria-hidden="true"
         >
           <span
             className={[
               "h-2.5 w-2.5 rounded-full",
-              active ? "bg-zinc-900 dark:bg-zinc-100" : "bg-transparent",
+              active ? "bg-gray-900 dark:bg-gray-100" : "bg-transparent",
             ].join(" ")}
           />
         </span>
 
         <div className="flex-1">
-          <div className="text-[14px] font-semibold tracking-[-0.01em] text-zinc-900 dark:text-zinc-100">
+          <div className="text-[14px] font-semibold tracking-[-0.01em] text-gray-900 dark:text-gray-100">
             {title}
           </div>
-          <div className="mt-1 text-[13px] leading-5 text-zinc-500 dark:text-zinc-400">
+          <div className="mt-1 text-[13px] leading-5 text-gray-500 dark:text-gray-400">
             {subtitle}
           </div>
         </div>
@@ -200,7 +200,7 @@ function ChoiceChip({
   tone?: "neutral" | "critical" | "high" | "low";
   onSelect: () => void;
 }) {
-  const borderIdle = "border border-black/5 dark:border-white/10 hover:border-zinc-900/15 dark:hover:border-white/15";
+  const borderIdle = "border border-gray-200/80 dark:border-white/10 hover:border-gray-900/15 dark:hover:border-white/15";
   
   const borderActive =
     tone === "critical"
@@ -209,7 +209,7 @@ function ChoiceChip({
       ? "border-2 border-orange-500/40 dark:border-orange-400/50"
       : tone === "low"
       ? "border-2 border-amber-500/40 dark:border-amber-400/50"
-      : "border-2 border-zinc-900/30 dark:border-white/30";
+      : "border-2 border-gray-900/30 dark:border-white/30";
 
   const labelColor =
     tone === "critical"
@@ -225,8 +225,8 @@ function ChoiceChip({
         ? "text-amber-600 dark:text-amber-300"
         : "text-amber-600 dark:text-amber-400"
       : active
-      ? "text-zinc-900 dark:text-white"
-      : "text-zinc-900 dark:text-zinc-100";
+      ? "text-gray-900 dark:text-white"
+      : "text-gray-900 dark:text-gray-100";
 
   return (
     <button
@@ -234,7 +234,7 @@ function ChoiceChip({
       onClick={onSelect}
       className={[
         "w-full rounded-2xl px-4 py-4 text-center transition-all",
-        "bg-white/70 dark:bg-white/5 backdrop-blur",
+        "bg-white dark:bg-white/[0.03] ",
         active ? borderActive : borderIdle,
         active ? "shadow-[0_10px_30px_rgba(0,0,0,0.06)]" : "",
       ].join(" ")}
@@ -242,7 +242,7 @@ function ChoiceChip({
       <div className={["text-[14px] font-semibold tracking-[-0.01em]", labelColor].join(" ")}>
         {label}
       </div>
-      <div className="mt-1 text-[12px] text-zinc-500 dark:text-zinc-400">{caption}</div>
+      <div className="mt-1 text-[12px] text-gray-500 dark:text-gray-400">{caption}</div>
     </button>
   );
 }
@@ -255,12 +255,12 @@ function Tag({
   onRemove: () => void;
 }) {
   return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-black/5 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur px-3 py-1.5 text-[13px] text-zinc-800 dark:text-zinc-100">
+    <span className="inline-flex items-center gap-2 rounded-full border border-gray-200/80 dark:border-white/10 bg-white dark:bg-white/[0.03] px-3 py-1.5 text-[13px] text-gray-800 dark:text-gray-100">
       <span className="truncate max-w-[260px]">{text}</span>
       <button
         type="button"
         onClick={onRemove}
-        className="rounded-full p-1 text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+        className="rounded-full p-1 text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
         aria-label={`Remove ${text}`}
       >
         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -341,27 +341,27 @@ function NotificationSummary({
   };
 
   return (
-    <div className="rounded-3xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur-xl shadow-[0_1px_0_rgba(0,0,0,0.04)]">
-      <div className="px-6 py-5 border-b border-black/5 dark:border-white/10">
+    <div className="rounded-2xl border border-gray-200/80 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)] dark:border-white/[0.08] dark:bg-[#111113] dark:shadow-none">
+      <div className="px-6 py-5 border-b border-gray-200/80 dark:border-white/10">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-4 flex-1">
-            <div className="h-10 w-10 rounded-2xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur flex items-center justify-center text-zinc-900 dark:text-zinc-100">
+            <div className="h-10 w-10 rounded-2xl border border-gray-200/80 dark:border-white/10 bg-white dark:bg-white/[0.03] flex items-center justify-center text-gray-900 dark:text-gray-100">
               {getChannelIcon()}
             </div>
             <div className="flex-1">
-              <h3 className="text-[15px] font-semibold tracking-[-0.01em] text-zinc-900 dark:text-zinc-100">
+              <h3 className="text-[15px] font-semibold tracking-[-0.01em] text-gray-900 dark:text-gray-100">
                 {getChannelName()} Notifications
               </h3>
               <div className="mt-2 space-y-2">
-                <div className="flex items-center gap-2 text-[13px] text-zinc-600 dark:text-zinc-400">
+                <div className="flex items-center gap-2 text-[13px] text-gray-600 dark:text-gray-400">
                   <span className="font-medium">Destination:</span>
                   <span>{getDestination()}</span>
                 </div>
-                <div className="flex items-center gap-2 text-[13px] text-zinc-600 dark:text-zinc-400">
+                <div className="flex items-center gap-2 text-[13px] text-gray-600 dark:text-gray-400">
                   <span className="font-medium">Domains:</span>
                   <span>{getDomainFilterText()}</span>
                 </div>
-                <div className="flex items-center gap-2 text-[13px] text-zinc-600 dark:text-zinc-400">
+                <div className="flex items-center gap-2 text-[13px] text-gray-600 dark:text-gray-400">
                   <span className="font-medium">Severity:</span>
                   <span>{getSeverityText()}</span>
                 </div>
@@ -458,8 +458,8 @@ function TelegramConnectSection({
   if (isLoadingStatus) {
     return (
       <div className="flex items-center gap-3 py-4">
-        <div className="h-5 w-5 animate-spin rounded-full border-2 border-zinc-900/20 border-t-zinc-900 dark:border-white/20 dark:border-t-white" />
-        <span className="text-[13px] text-zinc-500 dark:text-zinc-400">
+        <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-900/20 border-t-zinc-900 dark:border-white/20 dark:border-t-white" />
+        <span className="text-[13px] text-gray-500 dark:text-gray-400">
           Checking Telegram connection…
         </span>
       </div>
@@ -470,7 +470,7 @@ function TelegramConnectSection({
   if (telegramStatus?.connected) {
     return (
       <div className="space-y-4">
-        <div className="rounded-2xl border border-emerald-200 dark:border-emerald-800/50 bg-emerald-50/50 dark:bg-emerald-950/20 backdrop-blur p-5">
+        <div className="rounded-2xl border border-emerald-200 dark:border-emerald-800/50 bg-emerald-50/50 dark:bg-emerald-950/20 p-5">
           <div className="flex items-start gap-4">
             {/* Green check icon */}
             <div className="h-10 w-10 rounded-2xl bg-emerald-500 flex items-center justify-center flex-shrink-0">
@@ -502,7 +502,7 @@ function TelegramConnectSection({
                 type="button"
                 onClick={handleSendTest}
                 disabled={testMutation.isPending}
-                className="rounded-full border border-emerald-300 dark:border-emerald-700 bg-white/80 dark:bg-white/5 px-4 py-2 text-[13px] font-medium text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-colors disabled:opacity-50"
+                className="cursor-pointer rounded-lg border border-emerald-300 dark:border-emerald-700 bg-white dark:bg-white/[0.03] px-4 py-2 text-[13px] font-medium text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-colors disabled:opacity-50"
               >
                 {testMutation.isPending ? "Sending…" : "Send Test"}
               </button>
@@ -510,7 +510,7 @@ function TelegramConnectSection({
                 type="button"
                 onClick={handleDisconnect}
                 disabled={disconnectMutation.isPending}
-                className="rounded-full border border-rose-200 dark:border-rose-800 bg-white/80 dark:bg-white/5 px-4 py-2 text-[13px] font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 transition-colors disabled:opacity-50"
+                className="cursor-pointer rounded-lg border border-rose-200 dark:border-rose-800 bg-white dark:bg-white/[0.03] px-4 py-2 text-[13px] font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 transition-colors disabled:opacity-50"
               >
                 {disconnectMutation.isPending ? "Disconnecting…" : "Disconnect"}
               </button>
@@ -518,8 +518,8 @@ function TelegramConnectSection({
           </div>
         </div>
 
-        <div className="rounded-2xl border border-black/5 dark:border-white/10 bg-white/60 dark:bg-white/5 backdrop-blur p-4">
-          <div className="text-[13px] text-zinc-600 dark:text-zinc-300">
+        <div className="rounded-2xl border border-gray-200/80 dark:border-white/10 bg-gray-50/70 dark:bg-white/[0.03] p-4">
+          <div className="text-[13px] text-gray-600 dark:text-gray-300">
             💡 WAF attack alerts matching your filters will be sent to this Telegram chat automatically.
           </div>
         </div>
@@ -535,28 +535,28 @@ function TelegramConnectSection({
     return (
       <div className="space-y-4">
         {/* Step indicator */}
-        <div className="flex items-center gap-2 text-[13px] text-zinc-500 dark:text-zinc-400">
+        <div className="flex items-center gap-2 text-[13px] text-gray-500 dark:text-gray-400">
           <div className="h-5 w-5 animate-pulse rounded-full bg-blue-500/20 flex items-center justify-center">
             <div className="h-2 w-2 rounded-full bg-blue-500" />
           </div>
           Waiting for you to connect in Telegram…
         </div>
 
-        <div className="rounded-2xl border border-blue-200 dark:border-blue-800/50 bg-blue-50/30 dark:bg-blue-950/20 backdrop-blur p-5 space-y-4">
+        <div className="rounded-2xl border border-blue-200 dark:border-blue-800/50 bg-blue-50/30 dark:bg-blue-950/20 p-5 space-y-4">
           {/* Deep link */}
           {linkData.deepLink && !isExpired && (
             <div>
-              <div className="text-[13px] font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+              <div className="text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Step 1: Open this link in Telegram
               </div>
               <div className="flex items-stretch gap-2">
-                <div className="flex-1 rounded-xl border border-blue-200 dark:border-blue-700/50 bg-white/80 dark:bg-white/5 px-4 py-3 text-[13px] font-mono text-blue-700 dark:text-blue-300 truncate select-all">
+                <div className="flex-1 rounded-xl border border-blue-200 dark:border-blue-700/50 bg-white dark:bg-white/[0.03] px-4 py-3 text-[13px] font-mono text-blue-700 dark:text-blue-300 truncate select-all">
                   {linkData.deepLink}
                 </div>
                 <button
                   type="button"
                   onClick={handleCopyLink}
-                  className="rounded-xl border border-blue-200 dark:border-blue-700/50 bg-white/80 dark:bg-white/5 px-4 flex items-center gap-2 text-[13px] font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
+                  className="rounded-xl border border-blue-200 dark:border-blue-700/50 bg-white dark:bg-white/[0.03] px-4 flex items-center gap-2 text-[13px] font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
                 >
                   {copied ? (
                     <>
@@ -579,7 +579,7 @@ function TelegramConnectSection({
                 href={linkData.deepLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-3 inline-flex items-center gap-2 rounded-full bg-[#2AABEE] hover:bg-[#229ED9] text-white px-5 py-2.5 text-[13px] font-semibold transition-colors"
+                className="mt-3 inline-flex items-center gap-2 cursor-pointer rounded-lg bg-[#2AABEE] hover:bg-[#229ED9] text-white px-5 py-2.5 text-[13px] font-semibold transition-colors"
               >
                 <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.13-.041-.186-.024c-.082.03-1.375.87-3.973 2.556-.376.2-.715.298-.996.29-.34-.01-.995-.192-1.48-.35-.765-.243-1.37-.375-1.32-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
@@ -600,31 +600,31 @@ function TelegramConnectSection({
 
           {/* Manual connect instructions */}
           <div>
-            <div className="text-[13px] font-medium text-zinc-700 dark:text-zinc-300 mb-3">
+            <div className="text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-3">
               Manual Steps:
             </div>
             <div className="space-y-3">
               <div className="flex items-start gap-3">
                 <span className="flex-shrink-0 h-6 w-6 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-[12px] font-bold">1</span>
-                <div className="text-[13px] text-zinc-600 dark:text-zinc-400">
-                  Open Telegram and search for <span className="font-semibold text-zinc-800 dark:text-zinc-200">{linkData.botUsername ? `@${linkData.botUsername}` : "the bot"}</span>
+                <div className="text-[13px] text-gray-600 dark:text-gray-400">
+                  Open Telegram and search for <span className="font-semibold text-gray-800 dark:text-gray-200">{linkData.botUsername ? `@${linkData.botUsername}` : "the bot"}</span>
                 </div>
               </div>
               <div className="flex items-start gap-3">
                 <span className="flex-shrink-0 h-6 w-6 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-[12px] font-bold">2</span>
-                <div className="text-[13px] text-zinc-600 dark:text-zinc-400">
-                  Press <span className="font-semibold text-zinc-800 dark:text-zinc-200">Start</span> or type <code className="px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/40 font-mono text-[12px] text-blue-700 dark:text-blue-300">/start</code>
+                <div className="text-[13px] text-gray-600 dark:text-gray-400">
+                  Press <span className="font-semibold text-gray-800 dark:text-gray-200">Start</span> or type <code className="px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/40 font-mono text-[12px] text-blue-700 dark:text-blue-300">/start</code>
                 </div>
               </div>
               <div className="flex items-start gap-3">
                 <span className="flex-shrink-0 h-6 w-6 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-[12px] font-bold">3</span>
-                <div className="text-[13px] text-zinc-600 dark:text-zinc-400">
+                <div className="text-[13px] text-gray-600 dark:text-gray-400">
                   Send this message to the bot:
                 </div>
               </div>
             </div>
             <div className="mt-2 ml-9 flex items-stretch gap-2">
-              <div className="flex-1 rounded-xl border border-blue-200 dark:border-blue-700/50 bg-white/80 dark:bg-white/5 px-4 py-3 font-mono text-[14px] font-bold text-blue-700 dark:text-blue-300 select-all">
+              <div className="flex-1 rounded-xl border border-blue-200 dark:border-blue-700/50 bg-white dark:bg-white/[0.03] px-4 py-3 font-mono text-[14px] font-bold text-blue-700 dark:text-blue-300 select-all">
                 /start {linkData.connectCode}
               </div>
               <button
@@ -635,7 +635,7 @@ function TelegramConnectSection({
                   toast.success("Command copied!");
                   setTimeout(() => setCopied(false), 2000);
                 }}
-                className="rounded-xl border border-blue-200 dark:border-blue-700/50 bg-white/80 dark:bg-white/5 px-4 flex items-center gap-2 text-[13px] font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
+                className="rounded-xl border border-blue-200 dark:border-blue-700/50 bg-white dark:bg-white/[0.03] px-4 flex items-center gap-2 text-[13px] font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
               >
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -646,7 +646,7 @@ function TelegramConnectSection({
             <div className="mt-3 ml-9">
               <div className="flex items-start gap-3">
                 <span className="flex-shrink-0 h-6 w-6 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-[12px] font-bold">✓</span>
-                <div className="text-[13px] text-zinc-600 dark:text-zinc-400">
+                <div className="text-[13px] text-gray-600 dark:text-gray-400">
                   The bot will confirm the connection — this page will update automatically
                 </div>
               </div>
@@ -654,7 +654,7 @@ function TelegramConnectSection({
           </div>
 
           {/* Expiry */}
-          <div className="text-[12px] text-zinc-500 dark:text-zinc-400">
+          <div className="text-[12px] text-gray-500 dark:text-gray-400">
             {isExpired ? (
               <span className="text-rose-500">⏰ This code has expired. Click &quot;Generate New Code&quot; below.</span>
             ) : (
@@ -669,14 +669,14 @@ function TelegramConnectSection({
             type="button"
             onClick={handleGenerateLink}
             disabled={startLinkMutation.isPending}
-            className="rounded-full border border-black/5 dark:border-white/10 bg-white/70 dark:bg-white/5 px-5 py-2.5 text-[13px] font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-white/10 transition-colors disabled:opacity-50"
+            className="cursor-pointer rounded-lg border border-gray-200/80 dark:border-white/10 bg-white dark:bg-white/[0.03] px-5 py-2.5 text-[13px] font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/10 transition-colors disabled:opacity-50"
           >
             {startLinkMutation.isPending ? "Generating…" : "Generate New Code"}
           </button>
           <button
             type="button"
             onClick={() => setLinkData(null)}
-            className="rounded-full border border-black/5 dark:border-white/10 bg-white/70 dark:bg-white/5 px-5 py-2.5 text-[13px] font-medium text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-white/10 transition-colors"
+            className="cursor-pointer rounded-lg border border-gray-200/80 dark:border-white/10 bg-white dark:bg-white/[0.03] px-5 py-2.5 text-[13px] font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/10 transition-colors"
           >
             Cancel
           </button>
@@ -688,17 +688,17 @@ function TelegramConnectSection({
   // ——— NOT CONNECTED — show Connect button ———
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl border border-black/5 dark:border-white/10 bg-white/60 dark:bg-white/5 backdrop-blur p-6 text-center">
+      <div className="rounded-2xl border border-gray-200/80 dark:border-white/10 bg-gray-50/70 dark:bg-white/[0.03] p-6 text-center">
         <div className="mx-auto h-14 w-14 rounded-2xl bg-[#2AABEE]/10 flex items-center justify-center mb-4">
           <svg className="h-7 w-7 text-[#2AABEE]" fill="currentColor" viewBox="0 0 24 24">
             <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.13-.041-.186-.024c-.082.03-1.375.87-3.973 2.556-.376.2-.715.298-.996.29-.34-.01-.995-.192-1.48-.35-.765-.243-1.37-.375-1.32-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
           </svg>
         </div>
 
-        <h4 className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-100 mb-1">
+        <h4 className="text-[15px] font-semibold text-gray-900 dark:text-gray-100 mb-1">
           Connect Telegram
         </h4>
-        <p className="text-[13px] text-zinc-500 dark:text-zinc-400 mb-5 max-w-sm mx-auto">
+        <p className="text-[13px] text-gray-500 dark:text-gray-400 mb-5 max-w-sm mx-auto">
           Link your Telegram account to receive WAF attack alerts instantly in your chat.
         </p>
 
@@ -715,8 +715,8 @@ function TelegramConnectSection({
         </button>
       </div>
 
-      <div className="rounded-2xl border border-black/5 dark:border-white/10 bg-white/60 dark:bg-white/5 backdrop-blur p-4">
-        <div className="text-[13px] text-zinc-600 dark:text-zinc-300">
+      <div className="rounded-2xl border border-gray-200/80 dark:border-white/10 bg-gray-50/70 dark:bg-white/[0.03] p-4">
+        <div className="text-[13px] text-gray-600 dark:text-gray-300">
           <span className="font-medium">How it works:</span> Click "Connect Telegram" to generate a secure link.
           Open the link in Telegram, tap <span className="font-medium">Start</span>,
           and your account will be linked automatically.
@@ -917,9 +917,9 @@ export function NotificationsSettings({ domains, organizationId }: Notifications
   if (isLoadingSettings) {
     return (
       <div className="space-y-7">
-        <div className="rounded-3xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur-xl p-10 text-center">
-          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-zinc-900/20 border-t-zinc-900 dark:border-white/20 dark:border-t-white" />
-          <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400">
+        <div className="rounded-2xl border border-gray-200/80 bg-white dark:border-white/[0.08] dark:bg-[#111113] p-10 text-center">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-gray-900/20 border-t-zinc-900 dark:border-white/20 dark:border-t-white" />
+          <p className="mt-4 text-sm text-gray-600 dark:text-gray-400">
             Loading notification settings...
           </p>
         </div>
@@ -931,8 +931,8 @@ export function NotificationsSettings({ domains, organizationId }: Notifications
   if (!organizationId) {
     return (
       <div className="space-y-7">
-        <div className="rounded-3xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur-xl p-10 text-center">
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <div className="rounded-2xl border border-gray-200/80 bg-white dark:border-white/[0.08] dark:bg-[#111113] p-10 text-center">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
             No organization found. Please ensure you are a member of an organization.
           </p>
         </div>
@@ -947,10 +947,10 @@ export function NotificationsSettings({ domains, organizationId }: Notifications
         {/* Header */}
         <div className="flex items-end justify-between gap-4">
           <div>
-            <h2 className="text-[28px] font-semibold tracking-[-0.02em] text-zinc-900 dark:text-zinc-100">
+            <h2 className="text-[28px] font-semibold tracking-[-0.02em] text-gray-900 dark:text-gray-100">
               Notification Settings
             </h2>
-            <p className="mt-1 text-[13px] text-zinc-500 dark:text-zinc-400">
+            <p className="mt-1 text-[13px] text-gray-500 dark:text-gray-400">
               Configure how you receive WAF security alerts and summaries.
             </p>
           </div>
@@ -977,10 +977,10 @@ export function NotificationsSettings({ domains, organizationId }: Notifications
         </div>
 
         {/* Info Footer */}
-        <div className="rounded-3xl border border-black/5 dark:border-white/10 bg-white/60 dark:bg-white/5 backdrop-blur-xl p-5">
+        <div className="rounded-2xl border border-gray-200/80 dark:border-white/10 bg-gray-50/70 dark:bg-white/[0.03] p-5">
           <div className="flex items-start gap-3">
-            <div className="mt-0.5 h-9 w-9 rounded-2xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur flex items-center justify-center">
-              <svg className="h-5 w-5 text-zinc-900 dark:text-zinc-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="mt-0.5 h-9 w-9 rounded-2xl border border-gray-200/80 dark:border-white/10 bg-white dark:bg-white/[0.03] flex items-center justify-center">
+              <svg className="h-5 w-5 text-gray-900 dark:text-gray-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -990,8 +990,8 @@ export function NotificationsSettings({ domains, organizationId }: Notifications
               </svg>
             </div>
 
-            <div className="text-[12px] leading-5 text-zinc-500 dark:text-zinc-400">
-              <div className="font-medium text-zinc-900 dark:text-zinc-100 mb-1">
+            <div className="text-[12px] leading-5 text-gray-500 dark:text-gray-400">
+              <div className="font-medium text-gray-900 dark:text-gray-100 mb-1">
                 About Notifications
               </div>
               Configure how you want to receive WAF security alerts and summaries. You can filter by domain and severity,
@@ -1010,20 +1010,20 @@ export function NotificationsSettings({ domains, organizationId }: Notifications
         {/* Header */}
         <div className="flex items-end justify-between gap-4">
           <div>
-            <h2 className="text-[28px] font-semibold tracking-[-0.02em] text-zinc-900 dark:text-zinc-100">
+            <h2 className="text-[28px] font-semibold tracking-[-0.02em] text-gray-900 dark:text-gray-100">
               Notification Settings
             </h2>
-            <p className="mt-1 text-[13px] text-zinc-500 dark:text-zinc-400">
+            <p className="mt-1 text-[13px] text-gray-500 dark:text-gray-400">
               Configure how you receive WAF security alerts and summaries.
             </p>
           </div>
         </div>
 
         {/* Empty State */}
-        <div className="rounded-3xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur-xl shadow-[0_1px_0_rgba(0,0,0,0.04)] p-12">
+        <div className="rounded-2xl border border-gray-200/80 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)] dark:border-white/[0.08] dark:bg-[#111113] dark:shadow-none p-12">
           <div className="text-center">
-            <div className="mx-auto h-16 w-16 rounded-2xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur flex items-center justify-center mb-4">
-              <svg className="h-8 w-8 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="mx-auto h-16 w-16 rounded-2xl border border-gray-200/80 dark:border-white/10 bg-white dark:bg-white/[0.03] flex items-center justify-center mb-4">
+              <svg className="h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -1032,10 +1032,10 @@ export function NotificationsSettings({ domains, organizationId }: Notifications
                 />
               </svg>
             </div>
-            <h3 className="text-[18px] font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
+            <h3 className="text-[18px] font-semibold text-gray-900 dark:text-gray-100 mb-2">
               No notifications configured
             </h3>
-            <p className="text-[13px] text-zinc-500 dark:text-zinc-400 mb-6">
+            <p className="text-[13px] text-gray-500 dark:text-gray-400 mb-6">
               Set up notifications to receive WAF security alerts and summaries.
             </p>
             <Button onClick={handleAddNew} variant="primary" size="md">
@@ -1045,10 +1045,10 @@ export function NotificationsSettings({ domains, organizationId }: Notifications
         </div>
 
         {/* Info Footer */}
-        <div className="rounded-3xl border border-black/5 dark:border-white/10 bg-white/60 dark:bg-white/5 backdrop-blur-xl p-5">
+        <div className="rounded-2xl border border-gray-200/80 dark:border-white/10 bg-gray-50/70 dark:bg-white/[0.03] p-5">
           <div className="flex items-start gap-3">
-            <div className="mt-0.5 h-9 w-9 rounded-2xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur flex items-center justify-center">
-              <svg className="h-5 w-5 text-zinc-900 dark:text-zinc-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="mt-0.5 h-9 w-9 rounded-2xl border border-gray-200/80 dark:border-white/10 bg-white dark:bg-white/[0.03] flex items-center justify-center">
+              <svg className="h-5 w-5 text-gray-900 dark:text-gray-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -1058,8 +1058,8 @@ export function NotificationsSettings({ domains, organizationId }: Notifications
               </svg>
             </div>
 
-            <div className="text-[12px] leading-5 text-zinc-500 dark:text-zinc-400">
-              <div className="font-medium text-zinc-900 dark:text-zinc-100 mb-1">
+            <div className="text-[12px] leading-5 text-gray-500 dark:text-gray-400">
+              <div className="font-medium text-gray-900 dark:text-gray-100 mb-1">
                 About Notifications
               </div>
               Configure how you want to receive WAF security alerts and summaries. You can filter by domain and severity,
@@ -1077,20 +1077,20 @@ export function NotificationsSettings({ domains, organizationId }: Notifications
       {/* Header */}
       <div className="flex items-end justify-between gap-4">
         <div>
-          <h2 className="text-[28px] font-semibold tracking-[-0.02em] text-zinc-900 dark:text-zinc-100">
+          <h2 className="text-[28px] font-semibold tracking-[-0.02em] text-gray-900 dark:text-gray-100">
             {editingSettingsId ? "Edit Notification Settings" : "Add Notification Settings"}
           </h2>
-          <p className="mt-1 text-[13px] text-zinc-500 dark:text-zinc-400">
+          <p className="mt-1 text-[13px] text-gray-500 dark:text-gray-400">
             Configure how you receive WAF security alerts and summaries.
           </p>
         </div>
 
         <div className="hidden sm:flex items-center gap-2">
-          <div className="rounded-full border border-black/5 dark:border-white/10 bg-white/60 dark:bg-white/5 backdrop-blur px-3 py-1.5 text-[12px] text-zinc-600 dark:text-zinc-300">
-            Channel: <span className="font-medium text-zinc-900 dark:text-zinc-100">{notificationType}</span>
+          <div className="rounded-full border border-gray-200/80 dark:border-white/10 bg-gray-50/70 dark:bg-white/[0.03] px-3 py-1.5 text-[12px] text-gray-600 dark:text-gray-300">
+            Channel: <span className="font-medium text-gray-900 dark:text-gray-100">{notificationType}</span>
           </div>
-          <div className="rounded-full border border-black/5 dark:border-white/10 bg-white/60 dark:bg-white/5 backdrop-blur px-3 py-1.5 text-[12px] text-zinc-600 dark:text-zinc-300">
-            Severity: <span className="font-medium text-zinc-900 dark:text-zinc-100">{severityFilter}</span>
+          <div className="rounded-full border border-gray-200/80 dark:border-white/10 bg-gray-50/70 dark:bg-white/[0.03] px-3 py-1.5 text-[12px] text-gray-600 dark:text-gray-300">
+            Severity: <span className="font-medium text-gray-900 dark:text-gray-100">{severityFilter}</span>
           </div>
         </div>
       </div>
@@ -1141,7 +1141,7 @@ export function NotificationsSettings({ domains, organizationId }: Notifications
         <div className="space-y-6">
           {/* Domains */}
           <div className="space-y-3">
-            <div className="text-[13px] font-medium text-zinc-700 dark:text-zinc-300">
+            <div className="text-[13px] font-medium text-gray-700 dark:text-gray-300">
               Domains
             </div>
 
@@ -1164,7 +1164,7 @@ export function NotificationsSettings({ domains, organizationId }: Notifications
             </div>
 
             {domainFilter === "specific" && domains.length > 0 && (
-              <div className="rounded-2xl border border-black/5 dark:border-white/10 bg-white/60 dark:bg-white/5 backdrop-blur p-4">
+              <div className="rounded-2xl border border-gray-200/80 dark:border-white/10 bg-gray-50/70 dark:bg-white/[0.03] p-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {domains.map((domain) => {
                     const checked = selectedDomains.includes(domain);
@@ -1181,10 +1181,10 @@ export function NotificationsSettings({ domains, organizationId }: Notifications
                         }}
                         className={[
                           "rounded-2xl border px-3 py-3 text-left transition-all",
-                          "bg-white/70 dark:bg-white/5 backdrop-blur",
+                          "bg-white dark:bg-white/[0.03] ",
                           checked
-                            ? "border-zinc-900/20 dark:border-white/20 shadow-[0_10px_30px_rgba(0,0,0,0.06)]"
-                            : "border-black/5 dark:border-white/10 hover:border-zinc-900/15 dark:hover:border-white/15",
+                            ? "border-gray-900/20 dark:border-white/20 shadow-[0_10px_30px_rgba(0,0,0,0.06)]"
+                            : "border-gray-200/80 dark:border-white/10 hover:border-gray-900/15 dark:hover:border-white/15",
                         ].join(" ")}
                       >
                         <div className="flex items-center gap-3">
@@ -1192,15 +1192,15 @@ export function NotificationsSettings({ domains, organizationId }: Notifications
                             className={[
                               "h-5 w-5 rounded-md border flex items-center justify-center",
                               checked
-                                ? "border-zinc-900 dark:border-zinc-100 bg-zinc-900 dark:bg-zinc-100"
-                                : "border-zinc-300 dark:border-zinc-600",
+                                ? "border-gray-900 dark:border-gray-100 bg-gray-900 dark:bg-gray-100"
+                                : "border-gray-300 dark:border-gray-600",
                             ].join(" ")}
                             aria-hidden="true"
                           >
                             <svg
                               className={[
                                 "h-3.5 w-3.5",
-                                checked ? "text-white dark:text-zinc-900" : "text-transparent",
+                                checked ? "text-white dark:text-gray-900" : "text-transparent",
                               ].join(" ")}
                               viewBox="0 0 20 20"
                               fill="currentColor"
@@ -1213,7 +1213,7 @@ export function NotificationsSettings({ domains, organizationId }: Notifications
                             </svg>
                           </span>
 
-                          <span className="text-[13px] font-medium text-zinc-900 dark:text-zinc-100 font-mono">
+                          <span className="text-[13px] font-medium text-gray-900 dark:text-gray-100 font-mono">
                             {domain}
                           </span>
                         </div>
@@ -1227,7 +1227,7 @@ export function NotificationsSettings({ domains, organizationId }: Notifications
 
           {/* Severity */}
           <div className="space-y-3">
-            <div className="text-[13px] font-medium text-zinc-700 dark:text-zinc-300">
+            <div className="text-[13px] font-medium text-gray-700 dark:text-gray-300">
               Severity Level
             </div>
 
@@ -1295,7 +1295,7 @@ export function NotificationsSettings({ domains, organizationId }: Notifications
       >
         {notificationType === "email" && (
           <div className="space-y-4">
-            <div className="text-[13px] font-medium text-zinc-700 dark:text-zinc-300">
+            <div className="text-[13px] font-medium text-gray-700 dark:text-gray-300">
               Email Addresses
             </div>
 
@@ -1308,14 +1308,9 @@ export function NotificationsSettings({ domains, organizationId }: Notifications
                 onKeyDown={(e) => {
                   if (e.key === "Enter") handleAddEmail();
                 }}
-                className={[
-                  "flex-1 rounded-2xl",
-                  "bg-white/70 dark:bg-white/5 backdrop-blur-xl",
-                  "border border-black/5 dark:border-white/10",
-                  "focus:ring-2 focus:ring-zinc-900/15 dark:focus:ring-white/15",
-                ].join(" ")}
+                className="flex-1"
               />
-              <Button onClick={handleAddEmail} variant="primary" size="md" className="px-8 h-[48px]">
+              <Button onClick={handleAddEmail} variant="primary" size="md">
                 Add
               </Button>
             </div>
@@ -1358,10 +1353,10 @@ export function NotificationsSettings({ domains, organizationId }: Notifications
       </div>
 
       {/* Info Footer */}
-      <div className="rounded-3xl border border-black/5 dark:border-white/10 bg-white/60 dark:bg-white/5 backdrop-blur-xl p-5">
+      <div className="rounded-2xl border border-gray-200/80 dark:border-white/10 bg-gray-50/70 dark:bg-white/[0.03] p-5">
         <div className="flex items-start gap-3">
-          <div className="mt-0.5 h-9 w-9 rounded-2xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur flex items-center justify-center">
-            <svg className="h-5 w-5 text-zinc-900 dark:text-zinc-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="mt-0.5 h-9 w-9 rounded-2xl border border-gray-200/80 dark:border-white/10 bg-white dark:bg-white/[0.03] flex items-center justify-center">
+            <svg className="h-5 w-5 text-gray-900 dark:text-gray-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -1371,8 +1366,8 @@ export function NotificationsSettings({ domains, organizationId }: Notifications
             </svg>
           </div>
 
-          <div className="text-[12px] leading-5 text-zinc-500 dark:text-zinc-400">
-            <div className="font-medium text-zinc-900 dark:text-zinc-100 mb-1">
+          <div className="text-[12px] leading-5 text-gray-500 dark:text-gray-400">
+            <div className="font-medium text-gray-900 dark:text-gray-100 mb-1">
               About Notifications
             </div>
             Configure how you want to receive WAF security alerts and summaries. You can filter by domain and severity,

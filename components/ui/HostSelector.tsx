@@ -45,16 +45,22 @@ export function HostSelector({
       <select
         value={selectedHost}
         onChange={(e) => onHostChange(e.target.value)}
-        className="appearance-none bg-transparent border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-2 pr-10 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition-colors w-full min-w-0 sm:min-w-[12rem] max-w-full"
+        aria-label="Host"
+        className="w-full min-w-0 max-w-full cursor-pointer appearance-none rounded-lg border border-gray-200 bg-white py-2 pl-3.5 pr-10 text-[13px] font-medium text-gray-700 shadow-sm transition-colors hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500/40 sm:min-w-[13rem] dark:border-white/10 dark:bg-[#111113] dark:text-gray-200 dark:[color-scheme:dark] dark:hover:border-white/20"
       >
         {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
+          <option
+            key={opt.value}
+            value={opt.value}
+            className="bg-white text-gray-900 dark:bg-[#1c1c1e] dark:text-white"
+          >
             {opt.label}
           </option>
         ))}
       </select>
       <svg
-        className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+        className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+        aria-hidden="true"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"

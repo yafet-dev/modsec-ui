@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { type LogEntry } from "@/data/logs";
+import { ActionBadge, SeverityBadge } from "@/components/dashboard/dashboardUi";
 
 interface LogDetailPanelProps {
   log: LogEntry | null;
@@ -9,68 +10,71 @@ interface LogDetailPanelProps {
 }
 
 function formatTimestamp(timestamp: string) {
-  const date = new Date(timestamp);
-  return date.toLocaleString("en-US", {
-    month: "2-digit",
-    day: "2-digit",
+  return new Date(timestamp).toLocaleString(undefined, {
+    weekday: "short",
     year: "numeric",
-    hour: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
-    hour12: true,
+    hourCycle: "h23",
   });
 }
 
-function SeverityBadge({ severity }: { severity: LogEntry["severity"] }) {
-  const styles = {
-    critical: "bg-red-500 text-white",
-    high: "bg-orange-500 text-white",
-    medium: "bg-yellow-500 text-gray-900",
-    low: "bg-gray-400 dark:bg-gray-600 text-white",
-  };
+function CopyButton({ value, label }: { value: string; label: string }) {
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!copied) return;
+    const timer = setTimeout(() => setCopied(false), 1500);
+    return () => clearTimeout(timer);
+  }, [copied]);
 
   return (
-    <span
-      className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${styles[severity]}`}
+    <button
+      type="button"
+      onClick={() => {
+        navigator.clipboard?.writeText(value).then(() => setCopied(true), () => undefined);
+      }}
+      aria-label={`Copy ${label}`}
+      className="shrink-0 cursor-pointer rounded-md px-2 py-1 text-[11px] font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-white/[0.06] dark:hover:text-white"
     >
-      {severity.charAt(0).toUpperCase() + severity.slice(1)}
-    </span>
+      {copied ? "Copied" : "Copy"}
+    </button>
   );
 }
 
-function ActionBadge({ action }: { action: LogEntry["action"] }) {
-  const styles = {
-    blocked: "bg-red-500 text-white",
-    warning: "bg-green-500 text-white",
-  };
-
-  const labels = {
-    blocked: "Blocked",
-    warning: "Allowed",
-  };
-
+function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <span
-      className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${styles[action]}`}
-    >
-      {labels[action]}
-    </span>
+    <section className="border-b border-gray-100 px-6 py-5 last:border-0 dark:border-white/[0.06]">
+      <h3 className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+        {title}
+      </h3>
+      {children}
+    </section>
   );
 }
 
-function DetailRow({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="py-4 border-b border-gray-200 dark:border-gray-800 last:border-0">
-      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
-        {label}
-      </dt>
-      <dd className="text-sm text-gray-900 dark:text-white">{children}</dd>
+    <div className="grid grid-cols-[96px_1fr] items-start gap-3 py-1.5">
+      <dt className="text-[13px] text-gray-500 dark:text-gray-400">{label}</dt>
+      <dd className="min-w-0 text-[13px] text-gray-900 dark:text-gray-100">{children}</dd>
     </div>
   );
 }
 
+function CodeBlock({ children }: { children: ReactNode }) {
+  return (
+    <pre className="max-h-72 overflow-auto rounded-lg border border-gray-100 bg-gray-50 p-3 font-mono text-[12px] leading-5 whitespace-pre-wrap break-all text-gray-800 dark:border-white/[0.06] dark:bg-white/[0.03] dark:text-gray-200">
+      {children}
+    </pre>
+  );
+}
+
 export function LogDetailPanel({ log, onClose }: LogDetailPanelProps) {
-  // Close on escape key
+  // Close on Escape
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -79,13 +83,9 @@ export function LogDetailPanel({ log, onClose }: LogDetailPanelProps) {
     return () => document.removeEventListener("keydown", handleEscape);
   }, [onClose]);
 
-  // Prevent body scroll when panel is open
+  // Prevent body scroll while the panel is open
   useEffect(() => {
-    if (log) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
+    document.body.style.overflow = log ? "hidden" : "";
     return () => {
       document.body.style.overflow = "";
     };
@@ -93,121 +93,113 @@ export function LogDetailPanel({ log, onClose }: LogDetailPanelProps) {
 
   if (!log) return null;
 
+  const hasRuleId = Boolean(log.ruleId) && log.ruleId !== "-";
+  const headerCount = log.headers ? Object.keys(log.headers).length : 0;
+
   return (
     <>
-      {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/50 z-[50] transition-opacity"
+        className="fixed inset-0 z-[50] bg-black/40 backdrop-blur-[2px]"
         onClick={onClose}
+        aria-hidden="true"
       />
 
-      {/* Panel */}
-      <div className="fixed top-0 right-0 h-full w-full max-w-lg bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-800 z-[60] shadow-2xl overflow-y-auto animate-slide-in">
+      <aside
+        role="dialog"
+        aria-modal="true"
+        aria-label="Event details"
+        className="animate-slide-in fixed right-0 top-0 z-[60] flex h-full w-full max-w-xl flex-col border-l border-gray-200 bg-white shadow-2xl dark:border-white/[0.08] dark:bg-[#111113]"
+      >
         {/* Header */}
-        <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-6 py-4 flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Event Details
+        <div className="flex items-start justify-between gap-4 border-b border-gray-100 px-6 py-5 dark:border-white/[0.06]">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <SeverityBadge severity={log.severity} />
+              <ActionBadge action={log.action} />
+              {log.responseCode ? (
+                <span className="rounded-md border border-gray-200 px-1.5 py-0.5 font-mono text-[11px] text-gray-600 dark:border-white/10 dark:text-gray-300">
+                  HTTP {log.responseCode}
+                </span>
+              ) : null}
+            </div>
+            <h2 className="mt-2.5 text-[17px] font-semibold leading-snug tracking-tight text-gray-900 dark:text-white">
+              {log.ruleName || "WAF event"}
             </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-              Complete information about this WAF event
+            <p className="mt-1 text-[13px] text-gray-500 dark:text-gray-400">
+              {formatTimestamp(log.timestamp)}
             </p>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            className="grid h-8 w-8 shrink-0 cursor-pointer place-items-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-white/[0.06] dark:hover:text-white"
             aria-label="Close panel"
           >
-            <svg
-              className="w-5 h-5 text-gray-500 dark:text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
 
-        {/* Content */}
-        <div className="px-6 py-4">
-          {/* Action & Severity badges */}
-          <div className="flex items-center gap-6 mb-6">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Action
-              </span>
-              <ActionBadge action={log.action} />
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto">
+          <Section title="Request">
+            <dl>
+              <Field label="Method">
+                <span className="font-mono">{log.method}</span>
+              </Field>
+              <Field label="Host">{log.host || "—"}</Field>
+            </dl>
+            <div className="mt-2 flex items-start gap-2 rounded-lg border border-gray-100 bg-gray-50 p-3 dark:border-white/[0.06] dark:bg-white/[0.03]">
+              <code className="min-w-0 flex-1 break-all font-mono text-[12px] leading-5 text-gray-800 dark:text-gray-200">
+                {log.requestUri}
+              </code>
+              <CopyButton value={log.requestUri} label="request URI" />
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Severity
-              </span>
-              <SeverityBadge severity={log.severity} />
-            </div>
-          </div>
+          </Section>
 
-          {/* Details */}
-          <dl>
-            <DetailRow label="Timestamp">
-              {formatTimestamp(log.timestamp)}
-            </DetailRow>
-
-            <DetailRow label="Client IP">
-              <span className="font-mono">{log.clientIp}</span>
-              <span className="text-gray-500 dark:text-gray-400 ml-2">
-                ({log.clientCountry})
-              </span>
-            </DetailRow>
-
-            <DetailRow label="Host">{log.host}</DetailRow>
-
-            <DetailRow label="Method">
-              <span className="font-mono">{log.method}</span>
-            </DetailRow>
-
-            <DetailRow label="Request URI">
-              <span className="font-mono text-xs break-all">{log.requestUri}</span>
-            </DetailRow>
-
-            <DetailRow label="Rule">
-              {log.ruleName}
-              {log.ruleId !== "-" && (
-                <span className="text-gray-500 dark:text-gray-400 ml-2">
-                  ({log.ruleId})
+          <Section title="Source">
+            <dl>
+              <Field label="IP address">
+                <span className="flex items-center justify-between gap-2">
+                  <span className="font-mono">{log.clientIp}</span>
+                  <CopyButton value={log.clientIp} label="IP address" />
                 </span>
-              )}
-            </DetailRow>
+              </Field>
+              <Field label="Country">{log.clientCountry || "Unknown"}</Field>
+            </dl>
+          </Section>
 
-            <DetailRow label="User Agent">
-              <span className="text-xs break-all">{log.userAgent}</span>
-            </DetailRow>
+          <Section title="Rule">
+            <dl>
+              <Field label="Rule ID">
+                <span className="font-mono">{hasRuleId ? log.ruleId : "—"}</span>
+              </Field>
+              <Field label="Description">{log.ruleName || "—"}</Field>
+            </dl>
+          </Section>
 
-            <DetailRow label="Headers">
-              <div className="mt-2 bg-gray-100 dark:bg-gray-800 rounded-lg p-4 overflow-x-auto">
-                <pre className="text-xs font-mono text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
-                  {JSON.stringify(log.headers, null, 2)}
-                </pre>
-              </div>
-            </DetailRow>
+          {log.userAgent ? (
+            <Section title="User agent">
+              <CodeBlock>{log.userAgent}</CodeBlock>
+            </Section>
+          ) : null}
 
-            {log.requestBody && (
-              <DetailRow label="Request Body">
-                <div className="mt-2 bg-gray-100 dark:bg-gray-800 rounded-lg p-4 overflow-x-auto">
-                  <pre className="text-xs font-mono text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-all">
-                    {log.requestBody}
-                  </pre>
-                </div>
-              </DetailRow>
+          <Section title={`Headers${headerCount ? ` (${headerCount})` : ""}`}>
+            {headerCount ? (
+              <CodeBlock>{JSON.stringify(log.headers, null, 2)}</CodeBlock>
+            ) : (
+              <p className="text-[13px] text-gray-500 dark:text-gray-400">No headers recorded.</p>
             )}
-          </dl>
+          </Section>
+
+          {log.requestBody ? (
+            <Section title="Request body">
+              <CodeBlock>{log.requestBody}</CodeBlock>
+            </Section>
+          ) : null}
         </div>
-      </div>
+      </aside>
 
       <style jsx>{`
         @keyframes slide-in {
@@ -225,4 +217,3 @@ export function LogDetailPanel({ log, onClose }: LogDetailPanelProps) {
     </>
   );
 }
-

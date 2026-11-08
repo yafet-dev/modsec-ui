@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useRole } from "@/components/providers/RoleProvider";
@@ -12,12 +12,9 @@ import { LogsTable } from "@/components/logs/LogsTable";
 import { LogsFilters } from "@/components/logs/LogsFilters";
 import { LogDetailPanel } from "@/components/logs/LogDetailPanel";
 import { LogProcessingStatus } from "@/components/logs/LogProcessingStatus";
+import { MiniStat, PageHeader, useChartColors } from "@/components/dashboard/dashboardUi";
 import type { LogEntry } from "@/data/logs";
-import {
-  useLogs,
-  useLogAnalytics,
-  useLogHosts,
-} from "@/lib/api/hooks/useLogs";
+import { useLogs, useLogAnalytics, useLogHosts } from "@/lib/api/hooks/useLogs";
 import type { GetLogsParams } from "@/lib/api/logs";
 
 const ITEMS_PER_PAGE = 10;
@@ -26,6 +23,7 @@ export default function LogsPage() {
   const { isAuthenticated, isAuthLoading } = useAuth();
   const { currentRole } = useRole();
   const router = useRouter();
+  const colors = useChartColors();
   const { data: logHostsResponse } = useLogHosts();
 
   // Filter states
@@ -79,7 +77,6 @@ export default function LogsPage() {
       ? selectedHost
       : "all";
 
-  // Build API params
   const apiParams = useMemo(() => {
     const params: GetLogsParams = {
       page: currentPage,
@@ -89,28 +86,18 @@ export default function LogsPage() {
     if (effectiveSelectedHost !== "all") {
       params.host = effectiveSelectedHost;
     }
-
     if (severityFilter !== "all") {
-      params.severity =
-        severityFilter.toUpperCase() as GetLogsParams["severity"];
+      params.severity = severityFilter.toUpperCase() as GetLogsParams["severity"];
     }
-
     if (actionFilter !== "all") {
       params.action = actionFilter as GetLogsParams["action"];
     }
-
     if (searchQuery) {
       params.search = searchQuery;
     }
 
     return params;
-  }, [
-    currentPage,
-    effectiveSelectedHost,
-    severityFilter,
-    actionFilter,
-    searchQuery,
-  ]);
+  }, [currentPage, effectiveSelectedHost, severityFilter, actionFilter, searchQuery]);
 
   // Fetch logs from API (automatically filtered by user's organizations)
   const { data: logsResponse, isLoading, error } = useLogs(apiParams);
@@ -120,40 +107,51 @@ export default function LogsPage() {
     isError: analyticsError,
   } = useLogAnalytics({
     range: "24h",
-    host:
-      effectiveSelectedHost !== "all" ? effectiveSelectedHost : undefined,
+    host: effectiveSelectedHost !== "all" ? effectiveSelectedHost : undefined,
   });
 
   const logs = logsResponse?.logs || [];
   const totalLogs = logsResponse?.total || 0;
   const totalPages = Math.ceil(totalLogs / ITEMS_PER_PAGE);
+  const firstShown = totalLogs === 0 ? 0 : (currentPage - 1) * ITEMS_PER_PAGE + 1;
+  const lastShown = (currentPage - 1) * ITEMS_PER_PAGE + logs.length;
+  const hasFilters =
+    searchQuery !== "" || severityFilter !== "all" || actionFilter !== "all";
 
   const handleHostChange = (host: string) => {
     setSelectedHost(host);
     setCurrentPage(1);
   };
-
   const handleSearchChange = (search: string) => {
     setSearchQuery(search);
     setCurrentPage(1);
   };
-
   const handleSeverityChange = (severity: string) => {
     setSeverityFilter(severity);
     setCurrentPage(1);
   };
-
   const handleActionChange = (action: string) => {
     setActionFilter(action);
     setCurrentPage(1);
   };
+  const clearFilters = () => {
+    setSearchQuery("");
+    setSeverityFilter("all");
+    setActionFilter("all");
+    setCurrentPage(1);
+  };
 
   const formatCount = (value: number | undefined) => {
-    if (value === undefined) return analyticsLoading ? "Loading..." : "—";
+    if (value === undefined) return analyticsLoading ? "…" : "—";
     return value.toLocaleString();
   };
 
-  const topRule = analytics?.summary.topRule;
+  const summary = analytics?.summary;
+  const blockRate =
+    summary && summary.totalRequests > 0
+      ? (summary.blockedAttacks / summary.totalRequests) * 100
+      : null;
+  const topRule = summary?.topRule;
 
   if (isAuthLoading || !isAuthenticated || currentRole === "super_admin") {
     return null;
@@ -161,111 +159,129 @@ export default function LogsPage() {
 
   return (
     <LayoutWrapper>
-      <main className="py-8">
+      <main className="py-6 sm:py-8">
         <Section>
-          <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0">
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-gray-900 dark:text-white mb-2">
-                Logs
-              </h1>
-              <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400">
-                View and analyze WAF event logs
-              </p>
-            </div>
-            <HostSelector
-              selectedHost={effectiveSelectedHost}
-              onHostChange={handleHostChange}
-              hosts={uniqueHosts}
-              className="w-full sm:w-auto shrink-0"
-            />
-          </div>
-
-          <LogProcessingStatus />
-
-          {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-6">
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">
-                Blocked (24h)
-              </p>
-              <p className="text-3xl font-semibold text-gray-900 dark:text-white">
-                {formatCount(analytics?.summary.blockedAttacks)}
-              </p>
-            </div>
-            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-6">
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">
-                Allowed (24h)
-              </p>
-              <p className="text-3xl font-semibold text-gray-900 dark:text-white">
-                {formatCount(analytics?.summary.allowedRequests)}
-              </p>
-            </div>
-            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-6">
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">
-                Top Rule
-              </p>
-              <p
-                className="text-xl font-semibold text-gray-900 dark:text-white truncate"
-                title={topRule?.ruleName}
-              >
-                {topRule
-                  ? topRule.ruleName
-                  : analyticsLoading
-                    ? "Loading..."
-                    : analyticsError
-                      ? "Unavailable"
-                      : "None"}
-              </p>
-              {topRule && (
-                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 truncate">
-                  Rule {topRule.ruleId} · {topRule.count.toLocaleString()} events
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Filters */}
-          <LogsFilters
-            searchQuery={searchQuery}
-            onSearchChange={handleSearchChange}
-            severityFilter={severityFilter}
-            onSeverityChange={handleSeverityChange}
-            actionFilter={actionFilter}
-            onActionChange={handleActionChange}
+          <PageHeader
+            live
+            title="Event logs"
+            description={
+              <>
+                Every WAF event for{" "}
+                <span className="font-medium text-gray-700 dark:text-gray-200">
+                  {effectiveSelectedHost === "all" ? "all hosts" : effectiveSelectedHost}
+                </span>
+                . Select a row to inspect it.
+              </>
+            }
           />
 
-          {/* Logs Table */}
-          {isLoading ? (
-            <div className="text-center py-12">
-              <p className="text-gray-500 dark:text-gray-400">Loading logs...</p>
-            </div>
-          ) : error ? (
-            <div className="text-center py-12">
-              <p className="text-red-500">Error loading logs. Please try again.</p>
-            </div>
-          ) : (
-            <>
-              <LogsTable logs={logs} onSelectLog={setSelectedLog} />
+          {/* Filters */}
+          <div className="mt-6 border-y border-gray-200/80 py-3 dark:border-white/[0.08]">
+            <LogsFilters
+              className=""
+              searchQuery={searchQuery}
+              onSearchChange={handleSearchChange}
+              severityFilter={severityFilter}
+              onSeverityChange={handleSeverityChange}
+              actionFilter={actionFilter}
+              onActionChange={handleActionChange}
+            >
+              <HostSelector
+                selectedHost={effectiveSelectedHost}
+                onHostChange={handleHostChange}
+                hosts={uniqueHosts}
+                className="w-full sm:w-auto"
+              />
+              {hasFilters ? (
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="h-9 cursor-pointer rounded-lg px-3 text-[13px] font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-white/[0.06] dark:hover:text-white"
+                >
+                  Clear filters
+                </button>
+              ) : null}
+            </LogsFilters>
+          </div>
 
-              {/* Pagination */}
-              <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm text-gray-500 dark:text-gray-400 text-center sm:text-left order-2 sm:order-1">
-                  Showing {logs.length} of {totalLogs} logs
-                </p>
-                <div className="order-1 sm:order-2 flex justify-center sm:justify-end w-full sm:w-auto">
-                  <Pagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={setCurrentPage}
-                  />
-                </div>
-              </div>
-            </>
-          )}
+          <div className="mt-6">
+            <LogProcessingStatus />
+
+            {/* Last 24 hours at a glance */}
+            <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+              <MiniStat
+                label="Events, last 24h"
+                value={formatCount(summary?.totalRequests)}
+                sub={analyticsError && !summary ? "Unavailable" : "Detected by the WAF"}
+              />
+              <MiniStat
+                label="Blocked"
+                accent={colors.blocked}
+                value={formatCount(summary?.blockedAttacks)}
+                sub={blockRate === null ? "No events yet" : `${blockRate.toFixed(1)}% of events`}
+              />
+              <MiniStat
+                label="Allowed"
+                accent={colors.allowed}
+                value={formatCount(summary?.allowedRequests)}
+                sub="Logged, not blocked"
+              />
+              <MiniStat
+                label="Top rule"
+                value={
+                  <span title={topRule?.ruleName}>
+                    {topRule
+                      ? topRule.ruleName || topRule.ruleId
+                      : analyticsLoading
+                        ? "…"
+                        : analyticsError
+                          ? "Unavailable"
+                          : "None"}
+                  </span>
+                }
+                sub={
+                  topRule
+                    ? `Rule ${topRule.ruleId} · ${topRule.count.toLocaleString()} events`
+                    : undefined
+                }
+              />
+            </div>
+
+            <div className="mt-4">
+              <LogsTable
+                logs={logs}
+                onSelectLog={setSelectedLog}
+                isLoading={isLoading}
+                errorMessage={error ? "Please try again in a moment." : undefined}
+                title="Events"
+                subtitle={
+                  isLoading
+                    ? "Loading…"
+                    : `${totalLogs.toLocaleString()} ${totalLogs === 1 ? "event" : "events"}${
+                        hasFilters ? " match your filters" : ""
+                      } · newest first`
+                }
+                footer={
+                  !isLoading && !error && totalLogs > 0 ? (
+                    <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-between">
+                      <p className="text-[13px] tabular-nums text-gray-500 dark:text-gray-400">
+                        Showing {firstShown.toLocaleString()}–{lastShown.toLocaleString()} of{" "}
+                        {totalLogs.toLocaleString()}
+                      </p>
+                      <Pagination
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        onPageChange={setCurrentPage}
+                      />
+                    </div>
+                  ) : undefined
+                }
+              />
+            </div>
+          </div>
         </Section>
       </main>
 
-      {/* Log Detail Panel */}
       <LogDetailPanel log={selectedLog} onClose={() => setSelectedLog(null)} />
     </LayoutWrapper>
   );

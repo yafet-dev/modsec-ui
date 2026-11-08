@@ -1,230 +1,231 @@
 "use client";
 
+import { ReactNode } from "react";
 import { type LogEntry } from "@/data/logs";
+import {
+  ActionBadge,
+  Card,
+  CardHeader,
+  SeverityBadge,
+} from "@/components/dashboard/dashboardUi";
 
 interface LogsTableProps {
   logs: LogEntry[];
   onSelectLog: (log: LogEntry) => void;
+  /** Optional card header. */
+  title?: string;
+  subtitle?: ReactNode;
+  /** Optional card footer, such as pagination. */
+  footer?: ReactNode;
+  /** Show placeholder rows instead of data. */
+  isLoading?: boolean;
+  /** Message shown instead of rows when loading failed. */
+  errorMessage?: string;
 }
 
-function SeverityBadge({ severity }: { severity: LogEntry["severity"] }) {
-  const styles = {
-    critical: "bg-red-500 text-white",
-    high: "bg-orange-500 text-white",
-    medium: "bg-yellow-500 text-gray-900",
-    low: "text-gray-500 dark:text-gray-400",
-  };
+const COLUMNS = ["Time", "Severity", "Action", "Source IP", "Request", "Rule"];
 
-  if (severity === "low") {
-    return (
-      <span className={`text-sm ${styles[severity]}`}>
-        {severity.charAt(0).toUpperCase() + severity.slice(1)}
-      </span>
-    );
-  }
-
-  return (
-    <span
-      className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${styles[severity]}`}
-    >
-      {severity.charAt(0).toUpperCase() + severity.slice(1)}
-    </span>
-  );
+function formatDate(timestamp: string) {
+  return new Date(timestamp).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-function ActionBadge({ action }: { action: LogEntry["action"] }) {
-  const styles = {
-    blocked: "bg-red-500 text-white",
-    warning: "bg-green-500 text-white",
-  };
-
-  const labels = {
-    blocked: "Blocked",
-    warning: "Allowed",
-  };
-
-  return (
-    <span
-      className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${styles[action]}`}
-    >
-      {labels[action]}
-    </span>
-  );
-}
-
-function formatTimestamp(timestamp: string) {
-  const date = new Date(timestamp);
-  return date.toLocaleString("en-US", {
-    month: "2-digit",
-    day: "2-digit",
-    year: "numeric",
-    hour: "numeric",
+function formatTime(timestamp: string) {
+  return new Date(timestamp).toLocaleTimeString(undefined, {
+    hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
-    hour12: true,
+    hourCycle: "h23",
   });
 }
 
-/** Shorter time for narrow cards */
-function formatTimestampShort(timestamp: string) {
-  const date = new Date(timestamp);
-  return date.toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
+function hasRuleId(ruleId: string) {
+  return Boolean(ruleId) && ruleId !== "-";
 }
 
-function LogsEmptyState() {
+function MethodTag({ method }: { method: string }) {
   return (
-    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-12 text-center">
-      <svg
-        className="w-12 h-12 text-gray-400 mx-auto mb-4"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-        />
-      </svg>
-      <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-        No logs found
-      </h3>
-      <p className="text-gray-500 dark:text-gray-400">
-        Try adjusting your search or filter criteria
+    <span className="shrink-0 rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-gray-600 dark:bg-white/[0.06] dark:text-gray-300">
+      {method}
+    </span>
+  );
+}
+
+function EmptyState({ message }: { message?: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
+      <div className="grid h-11 w-11 place-items-center rounded-full bg-gray-100 dark:bg-white/[0.06]">
+        <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5-5m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      </div>
+      <p className="mt-3 text-[14px] font-medium text-gray-900 dark:text-white">
+        {message ? "Logs could not be loaded" : "No matching events"}
+      </p>
+      <p className="mt-1 text-[13px] text-gray-500 dark:text-gray-400">
+        {message ?? "Try a different search or clear a filter."}
       </p>
     </div>
   );
 }
 
-export function LogsTable({ logs, onSelectLog }: LogsTableProps) {
-  if (logs.length === 0) {
-    return <LogsEmptyState />;
-  }
-
+function LoadingRows() {
   return (
-    <>
-      {/* Mobile / small tablet: stacked cards (tap to open detail) */}
-      <div className="md:hidden space-y-3">
-        {logs.map((log) => (
-          <button
-            key={log.id}
-            type="button"
-            onClick={() => onSelectLog(log)}
-            className="w-full text-left rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-sm transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/80 active:bg-gray-100 dark:active:bg-gray-800"
-          >
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <SeverityBadge severity={log.severity} />
-                <ActionBadge action={log.action} />
-              </div>
-              <time
-                dateTime={log.timestamp}
-                className="text-xs text-gray-500 dark:text-gray-400 shrink-0"
-              >
-                {formatTimestampShort(log.timestamp)}
-              </time>
-            </div>
-            <p className="text-xs font-mono font-medium text-gray-900 dark:text-white mb-1">
-              {log.clientIp}
-            </p>
-            <p className="text-sm text-gray-600 dark:text-gray-300 break-all line-clamp-2 mb-2">
-              {log.requestUri}
-            </p>
-            <p className="text-sm font-medium text-gray-900 dark:text-white line-clamp-2">
-              {log.ruleName}
-            </p>
-            {log.ruleId !== "-" && (
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                {log.ruleId}
-              </p>
-            )}
-          </button>
-        ))}
-      </div>
+    <ul className="divide-y divide-gray-100 dark:divide-white/[0.06]" aria-busy="true">
+      {Array.from({ length: 8 }).map((_, index) => (
+        <li key={index} className="flex items-center gap-6 px-5 py-4">
+          <div className="h-3.5 w-20 animate-pulse rounded bg-gray-100 dark:bg-white/[0.06]" />
+          <div className="h-3.5 w-16 animate-pulse rounded bg-gray-100 dark:bg-white/[0.06]" />
+          <div className="h-3.5 w-24 animate-pulse rounded bg-gray-100 dark:bg-white/[0.06]" />
+          <div className="h-3.5 flex-1 animate-pulse rounded bg-gray-100 dark:bg-white/[0.06]" />
+        </li>
+      ))}
+    </ul>
+  );
+}
 
-      {/* md+: full data table */}
-      <div className="hidden md:block bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px]">
+export function LogsTable({
+  logs,
+  onSelectLog,
+  title,
+  subtitle,
+  footer,
+  isLoading = false,
+  errorMessage,
+}: LogsTableProps) {
+  const onRowKey = (event: React.KeyboardEvent, log: LogEntry) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      onSelectLog(log);
+    }
+  };
+
+  let body: ReactNode;
+  if (isLoading) {
+    body = <LoadingRows />;
+  } else if (errorMessage) {
+    body = <EmptyState message={errorMessage} />;
+  } else if (logs.length === 0) {
+    body = <EmptyState />;
+  } else {
+    body = (
+      <>
+        {/* Small screens: compact rows */}
+        <ul className="divide-y divide-gray-100 md:hidden dark:divide-white/[0.06]">
+          {logs.map((log) => (
+            <li key={log.id}>
+              <button
+                type="button"
+                onClick={() => onSelectLog(log)}
+                className="w-full cursor-pointer px-4 py-3.5 text-left transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.03]"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-1.5">
+                    <SeverityBadge severity={log.severity} />
+                    <ActionBadge action={log.action} />
+                  </div>
+                  <time dateTime={log.timestamp} className="shrink-0 text-[12px] tabular-nums text-gray-400">
+                    {formatDate(log.timestamp)} {formatTime(log.timestamp)}
+                  </time>
+                </div>
+                <p className="mt-2 truncate text-[13px] font-medium text-gray-900 dark:text-white">
+                  {log.ruleName || `${log.method} ${log.requestUri}`}
+                </p>
+                <p className="mt-1 flex min-w-0 items-center gap-2 text-[12px] text-gray-500 dark:text-gray-400">
+                  <span className="font-mono">{log.clientIp}</span>
+                  <span className="truncate">{log.host}{log.requestUri}</span>
+                </p>
+              </button>
+            </li>
+          ))}
+        </ul>
+
+        {/* md and up: data table */}
+        <div className="hidden overflow-x-auto md:block">
+          <table className="w-full min-w-[860px] text-left">
             <thead>
-              <tr className="border-b border-gray-200 dark:border-gray-800">
-                <th className="text-left px-4 lg:px-6 py-3 lg:py-4 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
-                  Timestamp
-                </th>
-                <th className="text-left px-4 lg:px-6 py-3 lg:py-4 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
-                  Client IP
-                </th>
-                <th className="text-left px-4 lg:px-6 py-3 lg:py-4 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Request URI
-                </th>
-                <th className="text-left px-4 lg:px-6 py-3 lg:py-4 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Rule
-                </th>
-                <th className="text-center px-4 lg:px-6 py-3 lg:py-4 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
-                  Severity
-                </th>
-                <th className="text-center px-4 lg:px-6 py-3 lg:py-4 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
-                  Action
-                </th>
+              <tr className="border-b border-gray-100 bg-gray-50/60 dark:border-white/[0.06] dark:bg-white/[0.02]">
+                {COLUMNS.map((column) => (
+                  <th
+                    key={column}
+                    scope="col"
+                    className="whitespace-nowrap px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-gray-500 first:pl-5 last:pr-5 dark:text-gray-400"
+                  >
+                    {column}
+                  </th>
+                ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
+            <tbody className="divide-y divide-gray-100 dark:divide-white/[0.06]">
               {logs.map((log) => (
                 <tr
                   key={log.id}
+                  tabIndex={0}
                   onClick={() => onSelectLog(log)}
-                  className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer"
+                  onKeyDown={(event) => onRowKey(event, log)}
+                  className="group cursor-pointer transition-colors hover:bg-gray-50 focus:bg-gray-50 focus:outline-none dark:hover:bg-white/[0.03] dark:focus:bg-white/[0.03]"
                 >
-                  <td className="px-4 lg:px-6 py-4 lg:py-5 whitespace-nowrap">
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      {formatTimestamp(log.timestamp)}
-                    </span>
+                  <td className="whitespace-nowrap py-3 pl-5 pr-4 align-top">
+                    <div className="text-[13px] tabular-nums text-gray-900 dark:text-gray-100">
+                      {formatTime(log.timestamp)}
+                    </div>
+                    <div className="text-[12px] text-gray-400 dark:text-gray-500">
+                      {formatDate(log.timestamp)}
+                    </div>
                   </td>
-                  <td className="px-4 lg:px-6 py-4 lg:py-5 whitespace-nowrap">
-                    <span className="text-sm font-mono font-medium text-gray-900 dark:text-white">
+                  <td className="whitespace-nowrap px-4 py-3 align-top">
+                    <SeverityBadge severity={log.severity} />
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 align-top">
+                    <ActionBadge action={log.action} />
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 align-top">
+                    <span className="font-mono text-[13px] text-gray-900 dark:text-gray-100">
                       {log.clientIp}
                     </span>
                   </td>
-                  <td className="px-4 lg:px-6 py-4 lg:py-5 max-w-48 lg:max-w-xs">
-                    <span className="text-sm text-gray-600 dark:text-gray-300 truncate block">
-                      {log.requestUri}
-                    </span>
+                  <td className="max-w-[320px] px-4 py-3 align-top">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <MethodTag method={log.method} />
+                      <span
+                        className="truncate font-mono text-[12px] text-gray-700 dark:text-gray-300"
+                        title={log.requestUri}
+                      >
+                        {log.requestUri}
+                      </span>
+                    </div>
+                    <div className="mt-0.5 truncate text-[12px] text-gray-400 dark:text-gray-500">
+                      {log.host}
+                    </div>
                   </td>
-                  <td className="px-4 lg:px-6 py-4 lg:py-5">
-                    <div>
-                      <p className="text-sm font-medium text-gray-900 dark:text-white line-clamp-2">
-                        {log.ruleName}
+                  <td className="max-w-[300px] py-3 pl-4 pr-5 align-top">
+                    <p
+                      className="truncate text-[13px] font-medium text-gray-900 dark:text-white"
+                      title={log.ruleName}
+                    >
+                      {log.ruleName || "—"}
+                    </p>
+                    {hasRuleId(log.ruleId) ? (
+                      <p className="mt-0.5 font-mono text-[12px] text-gray-400 dark:text-gray-500">
+                        {log.ruleId}
                       </p>
-                      {log.ruleId !== "-" && (
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                          {log.ruleId}
-                        </p>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 lg:px-6 py-4 lg:py-5">
-                    <div className="flex justify-center">
-                      <SeverityBadge severity={log.severity} />
-                    </div>
-                  </td>
-                  <td className="px-4 lg:px-6 py-4 lg:py-5">
-                    <div className="flex justify-center">
-                      <ActionBadge action={log.action} />
-                    </div>
+                    ) : null}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      </div>
-    </>
+      </>
+    );
+  }
+
+  return (
+    <Card className="overflow-hidden">
+      {title ? <CardHeader title={title} subtitle={subtitle} /> : null}
+      {body}
+      {footer ? (
+        <div className="border-t border-gray-100 px-5 py-3 dark:border-white/[0.06]">{footer}</div>
+      ) : null}
+    </Card>
   );
 }

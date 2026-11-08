@@ -7,8 +7,11 @@ import { useAuth } from "@/components/providers/AuthProvider";
 import { useRole } from "@/components/providers/RoleProvider";
 import { LayoutWrapper } from "@/components/ui/LayoutWrapper";
 import { Section } from "@/components/ui/Section";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
+import {
+  DashButton as Button,
+  DashInput as Input,
+  PageHeader,
+} from "@/components/dashboard/dashboardUi";
 import {
   useMyOrganizations,
   useSendSummaryReportNow,
@@ -19,14 +22,16 @@ import { WAFSettingsSkeleton } from "@/components/settings/WAFSettingsSkeleton";
 import { IPBanList } from "@/components/settings/IPBanList";
 import { GeoLocationAccess } from "@/components/settings/GeoLocationAccess";
 import { NotificationsSettings } from "@/components/settings/NotificationsSettings";
+import { DataRetentionSettings } from "@/components/settings/DataRetentionSettings";
 
-type TabKey = "waf" | "ip-ban" | "geo-location" | "notifications";
+type TabKey = "waf" | "ip-ban" | "geo-location" | "notifications" | "data-retention";
 
 const tabs = [
   { key: "waf" as const, label: "WAF" },
   { key: "ip-ban" as const, label: "IP Ban List" },
   { key: "geo-location" as const, label: "Geo Access" },
   { key: "notifications" as const, label: "Notifications" },
+  { key: "data-retention" as const, label: "Data Retention" },
 ];
 
 interface SavedSummarySettings {
@@ -201,31 +206,28 @@ export default function SettingsPage() {
 
   return (
     <LayoutWrapper>
-      {/* Apple-ish page background */}
-      <main className="min-h-[calc(100vh-64px)] bg-[#f5f5f7] dark:bg-[#0b0b0f]">
+      <main className="py-6 sm:py-8">
         <Section>
-          <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
-            {/* Header (big Apple-style typography) */}
-            <div className="mb-8">
-              <p className="text-xs tracking-wide text-black/60 dark:text-white/60">
-                Settings
-              </p>
-              <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[#1d1d1f] dark:text-white sm:text-4xl">
-                Security & Controls
-              </h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-black/60 dark:text-white/60">
-                Manage Web Application Firewall protection, access controls, and notifications
-                with a clean, per-domain configuration.
-              </p>
-            </div>
+          <div>
+            <PageHeader
+              eyebrow="Configuration"
+              title="Settings"
+              description={
+                organization?.name ? (
+                  <>
+                    Protection, access control, alerts and data retention for{" "}
+                    <span className="font-medium text-gray-700 dark:text-gray-200">
+                      {organization.name}
+                    </span>
+                  </>
+                ) : (
+                  "Protection, access control, alerts and data retention"
+                )
+              }
+            />
 
-            {/* Segmented control navigation */}
-            <div className="mb-8">
-              <AppleSegmentedTabs
-                tabs={tabs}
-                value={activeTab}
-                onChange={setActiveTab}
-              />
+            <div className="mb-6 mt-6">
+              <SettingsTabs tabs={tabs} value={activeTab} onChange={setActiveTab} />
             </div>
 
             {/* Content */}
@@ -237,7 +239,7 @@ export default function SettingsPage() {
                   <GlassCard className="p-10 text-center">
                     <div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-full bg-black/5 dark:bg-white/10">
                       <svg
-                        className="h-6 w-6 text-black/50 dark:text-white/60"
+                        className="h-6 w-6 text-gray-500 dark:text-gray-400"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -250,10 +252,10 @@ export default function SettingsPage() {
                         />
                       </svg>
                     </div>
-                    <h2 className="text-lg font-semibold text-[#1d1d1f] dark:text-white">
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
                       No organization found
                     </h2>
-                    <p className="mt-2 text-sm text-black/60 dark:text-white/60">
+                    <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
                       You need to be a member of an organization to manage WAF settings.
                     </p>
                   </GlassCard>
@@ -263,15 +265,15 @@ export default function SettingsPage() {
                     <GlassCard className="p-6">
                       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                         <div>
-                          <h2 className="text-xl font-semibold tracking-tight text-[#1d1d1f] dark:text-white">
+                          <h2 className="text-xl font-semibold tracking-tight text-gray-900 dark:text-white">
                             {organization.name}
                           </h2>
-                          <p className="mt-1 text-xs text-black/60 dark:text-white/60">
+                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                             Organization ID: {organization.id.slice(0, 8)}…
                           </p>
                         </div>
 
-                        <div className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white/60 px-3 py-1 text-xs font-medium text-black/70 backdrop-blur dark:border-white/10 dark:bg-white/5 dark:text-white/70">
+                        <div className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50/70 px-3 py-1 text-xs font-medium text-gray-700 dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-300">
                           <span
                             className={`h-2 w-2 rounded-full ${
                               organization.status === "active"
@@ -287,17 +289,17 @@ export default function SettingsPage() {
                     {/* WAF section */}
                     <GlassCard className="overflow-hidden">
                       <div className="px-6 py-6">
-                        <h3 className="text-lg font-semibold tracking-tight text-[#1d1d1f] dark:text-white">
+                        <h3 className="text-lg font-semibold tracking-tight text-gray-900 dark:text-white">
                           WAF Protection
                         </h3>
-                        <p className="mt-1 text-sm text-black/60 dark:text-white/60">
+                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                           Enable or disable protection for each domain.
                         </p>
                       </div>
 
-                      <div className="border-t border-black/5 dark:border-white/10">
+                      <div className="border-t border-gray-200/80 dark:border-white/10">
                         {domains.length === 0 ? (
-                          <div className="px-6 py-10 text-center text-sm text-black/60 dark:text-white/60">
+                          <div className="px-6 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
                             No domains configured for this organization.
                           </div>
                         ) : (
@@ -315,12 +317,12 @@ export default function SettingsPage() {
                                 >
                                   <div className="min-w-0">
                                     <div className="flex items-center gap-3">
-                                      <p className="truncate font-mono text-sm font-medium text-[#1d1d1f] dark:text-white">
+                                      <p className="truncate font-mono text-sm font-medium text-gray-900 dark:text-white">
                                         {domain}
                                       </p>
                                       <AppleStatusPill enabled={wafEnabled} />
                                     </div>
-                                    <p className="mt-1 text-xs text-black/60 dark:text-white/60">
+                                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                                       {wafEnabled
                                         ? "Protected by Web Application Firewall"
                                         : "WAF protection is disabled"}
@@ -336,8 +338,8 @@ export default function SettingsPage() {
                                   </div>
 
                                   {isToggling && (
-                                    <div className="absolute inset-0 grid place-items-center bg-white/40 backdrop-blur dark:bg-black/30">
-                                      <div className="h-5 w-5 animate-spin rounded-full border-2 border-black/20 border-t-black/60 dark:border-white/20 dark:border-t-white/70" />
+                                    <div className="absolute inset-0 grid place-items-center bg-white/40 dark:bg-black/30">
+                                      <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-black/60 dark:border-white/20 dark:border-t-white/70" />
                                     </div>
                                   )}
                                 </div>
@@ -348,7 +350,7 @@ export default function SettingsPage() {
                       </div>
 
                       {domains.length > 0 && (
-                        <div className="border-t border-black/5 px-6 py-4 text-xs text-black/60 dark:border-white/10 dark:text-white/60">
+                        <div className="border-t border-gray-200/80 px-6 py-4 text-xs text-gray-500 dark:border-white/10 dark:text-gray-400">
                           When enabled, the WAF helps block common threats like SQL injection,
                           XSS, and malicious traffic patterns.
                         </div>
@@ -375,7 +377,7 @@ export default function SettingsPage() {
                         <div className="text-center py-8">
                           <div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-full bg-black/5 dark:bg-white/10">
                             <svg
-                              className="h-6 w-6 text-black/50 dark:text-white/60"
+                              className="h-6 w-6 text-gray-500 dark:text-gray-400"
                               fill="none"
                               stroke="currentColor"
                               viewBox="0 0 24 24"
@@ -388,10 +390,10 @@ export default function SettingsPage() {
                               />
                             </svg>
                           </div>
-                          <h3 className="text-lg font-semibold text-[#1d1d1f] dark:text-white mb-2">
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                             No Summary Reports Configured
                           </h3>
-                          <p className="text-sm text-black/60 dark:text-white/60 mb-2 max-w-md mx-auto">
+                          <p className="text-sm text-gray-500 dark:text-gray-400 mb-2 max-w-md mx-auto">
                             Receive Zergaw Cloud WAF reports by email (same layout as the security
                             digest): one message per domain, on your chosen schedule.
                           </p>
@@ -400,7 +402,7 @@ export default function SettingsPage() {
                               Configure Summary Reports
                             </Button>
                           ) : (
-                            <p className="text-xs text-black/50 dark:text-white/50">
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
                               Ask an organization admin to configure summary reports.
                             </p>
                           )}
@@ -410,10 +412,10 @@ export default function SettingsPage() {
                       <GlassCard className="p-6">
                         <div className="flex items-start justify-between gap-6">
                           <div>
-                            <h3 className="text-lg font-semibold tracking-tight text-[#1d1d1f] dark:text-white">
+                            <h3 className="text-lg font-semibold tracking-tight text-gray-900 dark:text-white">
                               Summary Reports
                             </h3>
-                            <p className="mt-1 text-sm text-black/60 dark:text-white/60">
+                            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                               Recipients get one email per protected domain for each period (daily /
                               weekly / monthly / hourly), with stats and recent events. Uses your
                               Zergaw branding logo.
@@ -428,13 +430,13 @@ export default function SettingsPage() {
                         </div>
 
                         {summaryEnabled && (
-                          <div className="mt-6 space-y-6 border-t border-black/5 pt-6 dark:border-white/10">
+                          <div className="mt-6 space-y-6 border-t border-gray-200/80 pt-6 dark:border-white/10">
                             {/* Email Addresses */}
                             <div>
-                              <label className="block text-xs font-medium tracking-wide text-black/60 dark:text-white/60 mb-2">
+                              <label className="block text-xs font-medium tracking-wide text-gray-500 dark:text-gray-400 mb-2">
                                 Email Addresses
                               </label>
-                              <p className="mb-3 text-xs text-black/50 dark:text-white/50">
+                              <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
                                 Add email addresses to receive summary reports.
                               </p>
 
@@ -478,7 +480,7 @@ export default function SettingsPage() {
                               )}
 
                               {summaryEmails.length === 0 && (
-                                <p className="mt-2 text-xs text-black/50 dark:text-white/50 italic">
+                                <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 italic">
                                   No email addresses added yet. Add at least one to receive reports.
                                 </p>
                               )}
@@ -486,7 +488,7 @@ export default function SettingsPage() {
 
                             {/* Frequency */}
                             <div>
-                              <label className="block text-xs font-medium tracking-wide text-black/60 dark:text-white/60">
+                              <label className="block text-xs font-medium tracking-wide text-gray-500 dark:text-gray-400">
                                 Frequency
                               </label>
 
@@ -495,7 +497,7 @@ export default function SettingsPage() {
                                   value={summaryFrequency}
                                   onChange={(e) => setSummaryFrequency(e.target.value)}
                                   disabled={!canManageSummary || updateSummaryReport.isPending}
-                                  className="w-full rounded-xl border border-black/10 bg-white/70 px-4 py-3 text-sm text-[#1d1d1f] shadow-sm outline-none backdrop-blur transition focus:border-black/20 focus:ring-2 focus:ring-black/10 dark:border-white/10 dark:bg-white/5 dark:text-white dark:focus:border-white/20 dark:focus:ring-white/10 disabled:opacity-50"
+                                  className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm outline-none transition focus:border-black/20 focus:ring-2 focus:ring-black/10 dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:focus:border-white/20 dark:focus:ring-white/10 disabled:opacity-50"
                                 >
                                   <option value="hourly">Hourly</option>
                                   <option value="daily">Daily</option>
@@ -503,7 +505,7 @@ export default function SettingsPage() {
                                   <option value="monthly">Monthly</option>
                                 </select>
 
-                                <p className="mt-2 text-xs text-black/60 dark:text-white/60">
+                                <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                                   {summaryFrequency === "hourly" &&
                                     "You will receive a summary every hour with the latest WAF activity."}
                                   {summaryFrequency === "daily" &&
@@ -519,7 +521,7 @@ export default function SettingsPage() {
                         )}
 
                         {/* Save/Cancel / Send now */}
-                        <div className="mt-6 flex flex-wrap items-center justify-end gap-3 border-t border-black/5 pt-6 dark:border-white/10">
+                        <div className="mt-6 flex flex-wrap items-center justify-end gap-3 border-t border-gray-200/80 pt-6 dark:border-white/10">
                           <Button
                             type="button"
                             onClick={handleSendReportNow}
@@ -563,8 +565,12 @@ export default function SettingsPage() {
                 domains={domains} 
                 organizationId={organization?.id || null}
               />
-            ) : (
+            ) : activeTab === "notifications" ? (
               <NotificationsSettings domains={domains} organizationId={organization?.id || null} />
+            ) : orgsLoading ? (
+              <WAFSettingsSkeleton />
+            ) : (
+              <DataRetentionSettings organizationId={organization?.id || null} />
             )}
           </div>
         </Section>
@@ -584,8 +590,8 @@ function GlassCard({
   return (
     <div
       className={[
-        "rounded-2xl border border-black/10 bg-white/70 shadow-[0_1px_0_rgba(0,0,0,0.04),0_10px_30px_rgba(0,0,0,0.06)] backdrop-blur",
-        "dark:border-white/10 dark:bg-white/[0.06] dark:shadow-[0_1px_0_rgba(255,255,255,0.06),0_18px_40px_rgba(0,0,0,0.45)]",
+        "rounded-2xl border border-gray-200/80 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]",
+        "dark:border-white/[0.08] dark:bg-[#111113] dark:shadow-none",
         className,
       ].join(" ")}
     >
@@ -594,8 +600,8 @@ function GlassCard({
   );
 }
 
-/** Apple-ish segmented tabs — 2×2 grid on small screens so labels never crowd; pill row from `sm` up */
-function AppleSegmentedTabs({
+/** Underline tab bar; scrolls sideways on narrow screens instead of wrapping. */
+function SettingsTabs({
   tabs,
   value,
   onChange,
@@ -605,61 +611,50 @@ function AppleSegmentedTabs({
   onChange: (v: TabKey) => void;
 }) {
   return (
-    <div className="min-w-0">
-      <div
-        className={[
-          "rounded-2xl border border-black/10 bg-white/60 p-2 backdrop-blur dark:border-white/10 dark:bg-white/[0.06]",
-          "grid grid-cols-2 gap-2 sm:inline-flex sm:rounded-full sm:p-1 sm:gap-1",
-        ].join(" ")}
-      >
+    <div className="-mx-4 overflow-x-auto border-b border-gray-200/80 px-4 sm:mx-0 sm:px-0 dark:border-white/[0.08]">
+      <nav className="flex min-w-max gap-6" role="tablist" aria-label="Settings sections">
         {tabs.map((t) => {
           const active = t.key === value;
           return (
             <button
               key={t.key}
               type="button"
+              role="tab"
+              aria-selected={active}
               onClick={() => onChange(t.key)}
               className={[
-                "relative text-sm font-medium transition",
-                "w-full rounded-xl px-3 py-3 text-center leading-snug",
-                "sm:w-auto sm:shrink-0 sm:rounded-full sm:px-4 sm:py-2 sm:leading-normal sm:whitespace-nowrap",
+                "-mb-px cursor-pointer whitespace-nowrap border-b-2 py-3 text-[14px] font-medium transition-colors",
                 active
-                  ? "bg-white text-[#1d1d1f] shadow-sm dark:bg-white/15 dark:text-white"
-                  : "text-black/60 hover:text-black dark:text-white/60 dark:hover:text-white",
+                  ? "border-gray-900 text-gray-900 dark:border-white dark:text-white"
+                  : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-900 dark:text-gray-400 dark:hover:border-white/30 dark:hover:text-white",
               ].join(" ")}
-              aria-current={active ? "page" : undefined}
             >
               {t.label}
             </button>
           );
         })}
-      </div>
+      </nav>
     </div>
   );
 }
 
-/** Apple-ish status pill */
+/** WAF state label: dot plus text, matching the dashboard badges. */
 function AppleStatusPill({ enabled }: { enabled: boolean }) {
   return (
-    <span
-      className={[
-        "inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] font-medium",
-        "bg-white/60 text-black/70 border-black/10",
-        "dark:bg-white/[0.06] dark:text-white/70 dark:border-white/10",
-      ].join(" ")}
-    >
+    <span className="inline-flex items-center gap-1.5 rounded-md border border-gray-200 px-1.5 py-0.5 text-[11px] font-medium text-gray-700 dark:border-white/10 dark:text-gray-300">
       <span
         className={[
           "h-1.5 w-1.5 rounded-full",
-          enabled ? "bg-emerald-500" : "bg-black/30 dark:bg-white/30",
+          enabled ? "bg-emerald-500" : "bg-gray-400",
         ].join(" ")}
+        aria-hidden="true"
       />
-      {enabled ? "Enabled" : "Disabled"}
+      {enabled ? "Protected" : "Disabled"}
     </span>
   );
 }
 
-/** Apple-ish switch */
+/** Toggle switch */
 function AppleSwitch({
   enabled,
   onToggle,
@@ -677,18 +672,18 @@ function AppleSwitch({
       role="switch"
       aria-checked={enabled}
       className={[
-        "relative inline-flex h-7 w-12 items-center rounded-full transition",
-        "outline-none focus:ring-2 focus:ring-black/10 dark:focus:ring-white/10",
+        "relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors",
+        "outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40",
         disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer",
         enabled
-          ? "bg-[#0071e3] shadow-inner"
-          : "bg-black/10 dark:bg-white/15",
+          ? "bg-emerald-500"
+          : "bg-gray-200 dark:bg-white/15",
       ].join(" ")}
       aria-label={enabled ? "Disable" : "Enable"}
     >
       <span
         className={[
-          "absolute left-1 inline-block h-5 w-5 rounded-full bg-white shadow-[0_1px_2px_rgba(0,0,0,0.2)] transition-transform",
+          "absolute left-0.5 inline-block h-5 w-5 rounded-full bg-white shadow-[0_1px_2px_rgba(0,0,0,0.2)] transition-transform",
           enabled ? "translate-x-5" : "translate-x-0",
           "dark:bg-white",
         ].join(" ")}
@@ -730,7 +725,7 @@ function SummaryReportsSummary({
       <GlassCard className="p-6">
         <div className="flex items-start justify-between gap-6">
           <div className="flex items-start gap-4 flex-1">
-            <div className="h-10 w-10 rounded-2xl border border-black/10 bg-white/70 dark:border-white/10 dark:bg-white/5 backdrop-blur flex items-center justify-center text-black/50 dark:text-white/50">
+            <div className="h-10 w-10 rounded-2xl border border-gray-200 bg-white dark:border-white/10 dark:bg-white/[0.03] flex items-center justify-center text-gray-500 dark:text-gray-400">
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
@@ -741,10 +736,10 @@ function SummaryReportsSummary({
               </svg>
             </div>
             <div className="flex-1">
-              <h3 className="text-lg font-semibold tracking-tight text-[#1d1d1f] dark:text-white">
+              <h3 className="text-lg font-semibold tracking-tight text-gray-900 dark:text-white">
                 Summary Reports
               </h3>
-              <p className="mt-1 text-sm text-black/60 dark:text-white/60">
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 Summary reports are currently disabled.
               </p>
             </div>
@@ -785,7 +780,7 @@ function SummaryReportsSummary({
     <GlassCard className="p-6">
       <div className="flex items-start justify-between gap-6">
         <div className="flex items-start gap-4 flex-1">
-          <div className="h-10 w-10 rounded-2xl border border-black/10 bg-white/70 dark:border-white/10 dark:bg-white/5 backdrop-blur flex items-center justify-center text-[#1d1d1f] dark:text-white">
+          <div className="h-10 w-10 rounded-2xl border border-gray-200 bg-white dark:border-white/10 dark:bg-white/[0.03] flex items-center justify-center text-gray-900 dark:text-white">
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
@@ -796,15 +791,15 @@ function SummaryReportsSummary({
             </svg>
           </div>
           <div className="flex-1">
-            <h3 className="text-lg font-semibold tracking-tight text-[#1d1d1f] dark:text-white">
+            <h3 className="text-lg font-semibold tracking-tight text-gray-900 dark:text-white">
               Summary Reports
             </h3>
             <div className="mt-2 space-y-2">
-              <div className="flex items-center gap-2 text-sm text-black/60 dark:text-white/60">
+              <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
                 <span className="font-medium">Frequency:</span>
                 <span>{getFrequencyText()}</span>
               </div>
-              <div className="flex items-center gap-2 text-sm text-black/60 dark:text-white/60">
+              <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
                 <span className="font-medium">Recipients:</span>
                 <span>
                   {settings.emails.length > 0
@@ -817,7 +812,7 @@ function SummaryReportsSummary({
                   {settings.emails.map((email) => (
                     <span
                       key={email}
-                      className="inline-flex items-center rounded-full border border-black/10 bg-white/70 dark:border-white/10 dark:bg-white/5 backdrop-blur px-3 py-1 text-xs text-[#1d1d1f] dark:text-white"
+                      className="inline-flex items-center rounded-full border border-gray-200 bg-white dark:border-white/10 dark:bg-white/[0.03] px-3 py-1 text-xs text-gray-900 dark:text-white"
                     >
                       {email}
                     </span>
@@ -870,13 +865,13 @@ function SummaryEmailTag({
   removable?: boolean;
 }) {
   return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white/70 dark:border-white/10 dark:bg-white/5 backdrop-blur px-3 py-1.5 text-xs text-[#1d1d1f] dark:text-white">
+    <span className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white dark:border-white/10 dark:bg-white/[0.03] px-3 py-1.5 text-xs text-gray-900 dark:text-white">
       <span className="truncate max-w-[260px]">{email}</span>
       {removable && (
         <button
           type="button"
           onClick={onRemove}
-          className="rounded-full p-1 text-black/40 hover:text-black/70 dark:text-white/40 dark:hover:text-white/70 transition-colors"
+          className="rounded-full p-1 text-gray-400 hover:text-black/70 dark:text-gray-500 dark:hover:text-white/70 transition-colors"
           aria-label={`Remove ${email}`}
         >
           <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

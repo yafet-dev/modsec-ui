@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Settings page provides comprehensive control over your Web Application Firewall protection, access controls, and notification preferences. All settings are organized into four main sections accessible via tabs at the top of the page.
+The Settings page provides comprehensive control over your Web Application Firewall protection, access controls, notification preferences, and data retention. All settings are organized into five main sections accessible via tabs at the top of the page.
 
 ![Settings Overview](screenshots/settings-overview.png)
 *Screenshot: Settings page with tab navigation*
@@ -12,7 +12,7 @@ The Settings page provides comprehensive control over your Web Application Firew
 ## Accessing Settings
 
 1. Navigate to **Settings** from the main sidebar menu
-2. You'll see four tabs: **WAF**, **IP Ban List**, **Geo Access**, and **Notifications**
+2. You'll see five tabs: **WAF**, **IP Ban List**, **Geo Access**, **Notifications**, and **Data Retention**
 3. Click any tab to access that section's configuration
 
 ---
@@ -305,6 +305,27 @@ Configure how and when you receive security alerts. You can set up both email an
 3. Bot sends welcome message with connect button
 4. Click "Connect" button in Telegram
 5. Connection confirmed, ready to receive alerts
+
+---
+
+## 5. Data Retention
+
+Choose how long logs are kept with the **Keep logs for** dropdown, then click **Save**. Older logs are deleted automatically every day at 03:30 UTC.
+
+| Option | Notes |
+|--------|-------|
+| 7 days, 14 days, 2 months | |
+| **1 month** | **Default** |
+| 3 months | Recommended |
+| 6 months, 1 year | Requires a larger database |
+
+**Longer than 3 months:** an amber box shows the database you need: CPU, memory, and free storage. Tick **"My database meets these requirements"** to enable **Save**.
+
+**Shortening retention** asks you to confirm, because older logs are permanently deleted at the next cleanup.
+
+**Raw event data**, the unorganized ModSecurity JSON received before it becomes logs, follows the same period but is never kept longer than 3 months.
+
+Only organization admins can change retention. Other members can view it.
 
 ---
 

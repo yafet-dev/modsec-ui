@@ -3,8 +3,8 @@
 import { useState, useMemo, useEffect } from "react";
 import ReactCountryFlag from "react-country-flag";
 import toast from "react-hot-toast";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
+import { DashButton as Button } from "@/components/dashboard/dashboardUi";
+import { DashInput as Input } from "@/components/dashboard/dashboardUi";
 import { useConfirmation } from "@/components/providers/ConfirmationProvider";
 import { ALL_COUNTRIES } from "@/lib/constants/countries";
 import { useGeoAccess, useSaveGeoAccess } from "@/lib/api/hooks/useGeoAccess";
@@ -28,14 +28,14 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-3xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur-xl shadow-[0_1px_0_rgba(0,0,0,0.04)]">
-      <div className="flex items-start justify-between gap-4 px-6 py-5 border-b border-black/5 dark:border-white/10">
+    <section className="rounded-2xl border border-gray-200/80 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)] dark:border-white/[0.08] dark:bg-[#111113] dark:shadow-none">
+      <div className="flex items-start justify-between gap-4 px-6 py-5 border-b border-gray-200/80 dark:border-white/10">
         <div>
-          <h3 className="text-[15px] font-semibold tracking-[-0.01em] text-zinc-900 dark:text-zinc-100">
+          <h3 className="text-[15px] font-semibold tracking-[-0.01em] text-gray-900 dark:text-gray-100">
             {title}
           </h3>
           {description ? (
-            <p className="mt-1 text-[13px] leading-5 text-zinc-500 dark:text-zinc-400">
+            <p className="mt-1 text-[13px] leading-5 text-gray-500 dark:text-gray-400">
               {description}
             </p>
           ) : null}
@@ -65,34 +65,34 @@ function RadioCard({
       className={[
         "w-full text-left rounded-2xl border transition-all",
         "px-4 py-4 flex items-start gap-4",
-        "bg-white/70 dark:bg-white/5 backdrop-blur",
+        "bg-white dark:bg-white/[0.03] ",
         checked
-          ? "border-zinc-900/20 dark:border-white/20 shadow-[0_10px_30px_rgba(0,0,0,0.06)]"
-          : "border-black/5 dark:border-white/10 hover:border-zinc-900/15 dark:hover:border-white/15",
+          ? "border-gray-900/20 dark:border-white/20 shadow-[0_10px_30px_rgba(0,0,0,0.06)]"
+          : "border-gray-200/80 dark:border-white/10 hover:border-gray-900/15 dark:hover:border-white/15",
       ].join(" ")}
     >
       <span
         className={[
           "mt-0.5 h-5 w-5 rounded-full border flex items-center justify-center transition-colors",
           checked
-            ? "border-zinc-900 dark:border-zinc-100"
-            : "border-zinc-300 dark:border-zinc-600",
+            ? "border-gray-900 dark:border-gray-100"
+            : "border-gray-300 dark:border-gray-600",
         ].join(" ")}
         aria-hidden="true"
       >
         <span
           className={[
             "h-2.5 w-2.5 rounded-full transition-opacity",
-            checked ? "bg-zinc-900 dark:bg-zinc-100 opacity-100" : "opacity-0",
+            checked ? "bg-gray-900 dark:bg-gray-100 opacity-100" : "opacity-0",
           ].join(" ")}
         />
       </span>
 
       <span className="flex-1">
-        <span className="block text-[14px] font-semibold tracking-[-0.01em] text-zinc-900 dark:text-zinc-100">
+        <span className="block text-[14px] font-semibold tracking-[-0.01em] text-gray-900 dark:text-gray-100">
           {title}
         </span>
-        <span className="block mt-1 text-[13px] leading-5 text-zinc-500 dark:text-zinc-400">
+        <span className="block mt-1 text-[13px] leading-5 text-gray-500 dark:text-gray-400">
           {subtitle}
         </span>
       </span>
@@ -119,26 +119,26 @@ function Chip({
         "group w-full rounded-2xl border px-3 py-3 transition-all",
         "flex items-center gap-3",
         selected
-          ? "bg-white/70 dark:bg-white/10 backdrop-blur"
-          : "bg-white/70 dark:bg-white/5 backdrop-blur",
+          ? "bg-white dark:bg-white/10 "
+          : "bg-white dark:bg-white/[0.03] ",
         selected
-          ? "border-zinc-900/20 dark:border-white/30 shadow-[0_10px_30px_rgba(0,0,0,0.06)]"
-          : "border-black/5 dark:border-white/10 hover:border-zinc-900/15 dark:hover:border-white/15",
+          ? "border-gray-900/20 dark:border-white/30 shadow-[0_10px_30px_rgba(0,0,0,0.06)]"
+          : "border-gray-200/80 dark:border-white/10 hover:border-gray-900/15 dark:hover:border-white/15",
       ].join(" ")}
     >
       <span
         className={[
           "h-5 w-5 rounded-md border flex items-center justify-center",
           selected
-            ? "border-zinc-900 dark:border-zinc-100 bg-zinc-900 dark:bg-zinc-100"
-            : "border-zinc-300 dark:border-zinc-600 bg-transparent",
+            ? "border-gray-900 dark:border-gray-100 bg-gray-900 dark:bg-gray-100"
+            : "border-gray-300 dark:border-gray-600 bg-transparent",
         ].join(" ")}
         aria-hidden="true"
       >
         <svg
           className={[
             "h-3.5 w-3.5",
-            selected ? "text-white dark:text-zinc-900" : "text-transparent",
+            selected ? "text-white dark:text-gray-900" : "text-transparent",
           ].join(" ")}
           viewBox="0 0 20 20"
           fill="currentColor"
@@ -156,8 +156,8 @@ function Chip({
       <span className={[
         "text-[13px] font-medium",
         selected 
-          ? "text-zinc-900 dark:text-zinc-50" 
-          : "text-zinc-900 dark:text-zinc-100"
+          ? "text-gray-900 dark:text-gray-50" 
+          : "text-gray-900 dark:text-gray-100"
       ].join(" ")}>
         {label}
       </span>
@@ -386,9 +386,9 @@ export function GeoLocationAccess({ domains, organizationId }: GeoLocationAccess
   if (isLoadingSettings) {
     return (
       <div className="space-y-7">
-        <div className="rounded-3xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur-xl p-10 text-center">
-          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-zinc-900/20 border-t-zinc-900 dark:border-white/20 dark:border-t-white" />
-          <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400">
+        <div className="rounded-2xl border border-gray-200/80 bg-white dark:border-white/[0.08] dark:bg-[#111113] p-10 text-center">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-gray-900/20 border-t-zinc-900 dark:border-white/20 dark:border-t-white" />
+          <p className="mt-4 text-sm text-gray-600 dark:text-gray-400">
             Loading geo access settings...
           </p>
         </div>
@@ -400,8 +400,8 @@ export function GeoLocationAccess({ domains, organizationId }: GeoLocationAccess
   if (!organizationId) {
     return (
       <div className="space-y-7">
-        <div className="rounded-3xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur-xl p-10 text-center">
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <div className="rounded-2xl border border-gray-200/80 bg-white dark:border-white/[0.08] dark:bg-[#111113] p-10 text-center">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
             No organization found. Please ensure you are a member of an organization.
           </p>
         </div>
@@ -414,19 +414,19 @@ export function GeoLocationAccess({ domains, organizationId }: GeoLocationAccess
       {/* Page Header (Apple-ish) */}
       <div className="flex items-end justify-between gap-4">
         <div>
-          <h2 className="text-[28px] font-semibold tracking-[-0.02em] text-zinc-900 dark:text-zinc-100">
+          <h2 className="text-[28px] font-semibold tracking-[-0.02em] text-gray-900 dark:text-gray-100">
             Geo Location Access
           </h2>
-          <p className="mt-1 text-[13px] text-zinc-500 dark:text-zinc-400">
+          <p className="mt-1 text-[13px] text-gray-500 dark:text-gray-400">
             Control access to your domains by visitor region.
           </p>
         </div>
 
         <div className="hidden sm:flex items-center gap-2">
-          <div className="rounded-full border border-black/5 dark:border-white/10 bg-white/60 dark:bg-white/5 backdrop-blur px-3 py-1.5 text-[12px] text-zinc-600 dark:text-zinc-300">
+          <div className="rounded-full border border-gray-200/80 dark:border-white/10 bg-gray-50/70 dark:bg-white/[0.03] px-3 py-1.5 text-[12px] text-gray-600 dark:text-gray-300">
             {selectedDomain === "All" ? "All Domains" : selectedDomain}
           </div>
-          <div className="rounded-full border border-black/5 dark:border-white/10 bg-white/60 dark:bg-white/5 backdrop-blur px-3 py-1.5 text-[12px] text-zinc-600 dark:text-zinc-300">
+          <div className="rounded-full border border-gray-200/80 dark:border-white/10 bg-gray-50/70 dark:bg-white/[0.03] px-3 py-1.5 text-[12px] text-gray-600 dark:text-gray-300">
             {getStatusText()}
           </div>
         </div>
@@ -443,10 +443,10 @@ export function GeoLocationAccess({ domains, organizationId }: GeoLocationAccess
             onChange={(e) => setSelectedDomain(e.target.value)}
             className={[
               "w-full rounded-2xl px-4 py-3 text-[14px]",
-              "border border-black/5 dark:border-white/10",
-              "bg-white/70 dark:bg-zinc-800 backdrop-blur-xl",
-              "text-zinc-900 dark:text-zinc-100",
-              "outline-none focus:ring-2 focus:ring-zinc-900/15 dark:focus:ring-white/15",
+              "border border-gray-200/80 dark:border-white/10",
+              "bg-white dark:bg-gray-800 ",
+              "text-gray-900 dark:text-gray-100",
+              "outline-none focus:ring-2 focus:ring-gray-900/15 dark:focus:ring-white/15",
               "transition-shadow",
             ].join(" ")}
           >
@@ -554,18 +554,13 @@ export function GeoLocationAccess({ domains, organizationId }: GeoLocationAccess
                 placeholder="Search by name or code…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className={[
-                  "w-full rounded-2xl",
-                  "bg-white/70 dark:bg-white/5 backdrop-blur-xl",
-                  "border border-black/5 dark:border-white/10",
-                  "focus:ring-2 focus:ring-zinc-900/15 dark:focus:ring-white/15",
-                ].join(" ")}
+                className="w-full"
               />
             </div>
 
             {filteredCountries.length === 0 ? (
-              <div className="rounded-2xl border border-black/5 dark:border-white/10 bg-white/60 dark:bg-white/5 backdrop-blur p-6">
-                <p className="text-[13px] text-zinc-600 dark:text-zinc-300">
+              <div className="rounded-2xl border border-gray-200/80 dark:border-white/10 bg-gray-50/70 dark:bg-white/[0.03] p-6">
+                <p className="text-[13px] text-gray-600 dark:text-gray-300">
                   {selectedCountries.length > 0
                     ? searchQuery.trim()
                       ? `No more countries match "${searchQuery}".`
@@ -612,11 +607,11 @@ export function GeoLocationAccess({ domains, organizationId }: GeoLocationAccess
 
       {/* Status / Info */}
       {filterMode === "allow-all" ? (
-        <div className="rounded-3xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur-xl p-6">
+        <div className="rounded-2xl border border-gray-200/80 bg-white dark:border-white/[0.08] dark:bg-[#111113] p-6">
           <div className="flex items-start gap-3">
-            <div className="mt-0.5 h-9 w-9 rounded-2xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur flex items-center justify-center">
+            <div className="mt-0.5 h-9 w-9 rounded-2xl border border-gray-200/80 dark:border-white/10 bg-white dark:bg-white/[0.03] flex items-center justify-center">
               <svg
-                className="h-5 w-5 text-zinc-900 dark:text-zinc-100"
+                className="h-5 w-5 text-gray-900 dark:text-gray-100"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -626,21 +621,21 @@ export function GeoLocationAccess({ domains, organizationId }: GeoLocationAccess
               </svg>
             </div>
             <div>
-              <div className="text-[14px] font-semibold text-zinc-900 dark:text-zinc-100">
+              <div className="text-[14px] font-semibold text-gray-900 dark:text-gray-100">
                 All Countries Allowed
               </div>
-              <div className="mt-1 text-[13px] leading-5 text-zinc-500 dark:text-zinc-400">
+              <div className="mt-1 text-[13px] leading-5 text-gray-500 dark:text-gray-400">
                 No geographic restrictions are currently applied.
               </div>
             </div>
           </div>
         </div>
       ) : (
-        <div className="rounded-3xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur-xl p-6">
+        <div className="rounded-2xl border border-gray-200/80 bg-white dark:border-white/[0.08] dark:bg-[#111113] p-6">
           <div className="flex items-start gap-3">
-            <div className="mt-0.5 h-9 w-9 rounded-2xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur flex items-center justify-center">
+            <div className="mt-0.5 h-9 w-9 rounded-2xl border border-gray-200/80 dark:border-white/10 bg-white dark:bg-white/[0.03] flex items-center justify-center">
               <svg
-                className="h-5 w-5 text-zinc-900 dark:text-zinc-100"
+                className="h-5 w-5 text-gray-900 dark:text-gray-100"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -654,10 +649,10 @@ export function GeoLocationAccess({ domains, organizationId }: GeoLocationAccess
               </svg>
             </div>
             <div>
-              <div className="text-[14px] font-semibold text-zinc-900 dark:text-zinc-100">
+              <div className="text-[14px] font-semibold text-gray-900 dark:text-gray-100">
                 Review before saving
               </div>
-              <div className="mt-1 text-[13px] leading-5 text-zinc-500 dark:text-zinc-400">
+              <div className="mt-1 text-[13px] leading-5 text-gray-500 dark:text-gray-400">
                 You are applying <span className="font-medium">{getStatusText()}</span> to{" "}
                 <span className="font-medium">
                   {selectedDomain === "All" ? "All Domains" : selectedDomain}
@@ -682,8 +677,8 @@ export function GeoLocationAccess({ domains, organizationId }: GeoLocationAccess
       </div>
 
       {/* Footer tip */}
-      <div className="rounded-3xl border border-black/5 dark:border-white/10 bg-white/60 dark:bg-white/5 backdrop-blur-xl p-5">
-        <p className="text-[12px] leading-5 text-zinc-500 dark:text-zinc-400">
+      <div className="rounded-2xl border border-gray-200/80 dark:border-white/10 bg-gray-50/70 dark:bg-white/[0.03] p-5">
+        <p className="text-[12px] leading-5 text-gray-500 dark:text-gray-400">
           Geo rules control access based on visitor location. You can allow all, allow only specific
           regions, or block specific regions while allowing the rest.
         </p>

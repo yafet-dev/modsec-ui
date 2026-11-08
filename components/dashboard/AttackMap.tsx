@@ -15,6 +15,7 @@ import { useTheme } from "@/components/providers/ThemeProvider";
 import { MapSkeleton } from "@/components/ui/Skeleton";
 import { ALL_COUNTRIES } from "@/lib/constants/countries";
 import { useAttackOrigins } from "@/lib/api/hooks/useLogs";
+import { Card, CardHeader, STATUS_COLOR } from "./dashboardUi";
 
 // Served with the app so rendering never depends on a third-party CDN.
 const GEO_URL = "/countries-110m.json";
@@ -29,10 +30,11 @@ const ZOOM_STEP = 1.6;
 
 type Severity = "high" | "medium" | "low";
 
+// Same status palette as the threat level and severity badges.
 const SEVERITY_COLOR: Record<Severity, string> = {
-  high: "#ef4444",
-  medium: "#f97316",
-  low: "#eab308",
+  high: STATUS_COLOR.critical,
+  medium: STATUS_COLOR.serious,
+  low: STATUS_COLOR.warning,
 };
 
 const SEVERITY_RANK: Record<Severity, number> = { high: 3, medium: 2, low: 1 };
@@ -344,59 +346,60 @@ export function AttackMap({ hostId = "all" }: AttackMapProps) {
 
   if (isError && !attackOriginsResponse) {
     return (
-      <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-8 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-300">
-        Live attack origins could not be loaded. The dashboard will retry automatically.
-      </div>
+      <Card className="px-5 py-8 text-sm text-gray-600 dark:text-gray-300">
+        Attack origins could not be loaded. The dashboard will retry automatically.
+      </Card>
     );
   }
 
   return (
-    <div>
-      {/* Header with title and stats */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
-        <div className="flex items-center gap-3 flex-wrap">
-          <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
-            Attack Origins
-          </h3>
-          {/* Live indicator */}
-          <div className="flex items-center gap-2 px-2 py-1">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-            </span>
-            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-              {isError ? "RECONNECTING" : "LIVE"} · {originsWindowDays} DAYS
-            </span>
-          </div>
-        </div>
-
-        {/* Severity stats inline */}
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 sm:gap-6">
-          {(["high", "medium", "low"] as const).map((severity) => (
-            <div key={severity} className="flex items-center gap-2">
+    <Card>
+      <CardHeader
+        title="Attack origins"
+        subtitle={
+          <span className="inline-flex items-center gap-2">
+            <span className="relative flex h-2 w-2" aria-hidden="true">
+              {!isError ? (
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+              ) : null}
               <span
-                className="w-2 h-2 rounded-full"
-                style={{ backgroundColor: SEVERITY_COLOR[severity] }}
+                className={`relative inline-flex h-2 w-2 rounded-full ${
+                  isError ? "bg-gray-400" : "bg-emerald-500"
+                }`}
               />
-              <span
-                className="text-sm font-semibold"
-                style={{ color: SEVERITY_COLOR[severity] }}
+            </span>
+            {isError ? "Reconnecting" : "Live"} · source countries, last {originsWindowDays} days
+          </span>
+        }
+        right={
+          <div className="flex flex-wrap items-center gap-2">
+            {(["high", "medium", "low"] as const).map((severity) => (
+              <div
+                key={severity}
+                className="flex items-center gap-2 rounded-lg border border-gray-200 px-2.5 py-1 dark:border-white/10"
               >
-                {totals[severity]}
-              </span>
-              <span className="text-xs capitalize text-gray-500 dark:text-gray-400">
-                {severity}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
+                <span
+                  className="h-2 w-2 rounded-full"
+                  style={{ backgroundColor: SEVERITY_COLOR[severity] }}
+                  aria-hidden="true"
+                />
+                <span className="text-[12px] capitalize text-gray-500 dark:text-gray-400">
+                  {severity}
+                </span>
+                <span className="text-[13px] font-semibold tabular-nums text-gray-900 dark:text-white">
+                  {totals[severity].toLocaleString()}
+                </span>
+              </div>
+            ))}
+          </div>
+        }
+      />
 
-      <div className="flex flex-col lg:flex-row gap-4">
+      <div className="flex flex-col gap-4 p-4 lg:flex-row sm:p-5">
         {/* Map */}
         <div
           ref={containerRef}
-          className="relative flex-1 min-w-0 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-800"
+          className="relative min-w-0 flex-1 overflow-hidden rounded-xl border border-gray-100 bg-gray-50 dark:border-white/[0.06] dark:bg-white/[0.02]"
         >
           {geoData ? (
             <ComposableMap
@@ -424,13 +427,13 @@ export function AttackMap({ hostId = "all" }: AttackMapProps) {
                       <Geography
                         key={(geo as { rsmKey?: string }).rsmKey ?? `geo-${idx}`}
                         geography={geo}
-                        fill={isDark ? "#1f2937" : "#e5e7eb"}
-                        stroke={isDark ? "#374151" : "#d1d5db"}
+                        fill={isDark ? "#242427" : "#e4e4e7"}
+                        stroke={isDark ? "#333337" : "#d4d4d8"}
                         strokeWidth={0.5}
                         style={{
                           default: { outline: "none" },
                           hover: {
-                            fill: isDark ? "#374151" : "#d1d5db",
+                            fill: isDark ? "#333337" : "#d4d4d8",
                             outline: "none",
                           },
                           pressed: { outline: "none" },
@@ -611,7 +614,7 @@ export function AttackMap({ hostId = "all" }: AttackMapProps) {
           </ul>
         </aside>
       </div>
-    </div>
+    </Card>
   );
 }
 
