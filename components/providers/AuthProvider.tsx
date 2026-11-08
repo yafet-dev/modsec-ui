@@ -8,7 +8,7 @@ import {
   ReactNode,
 } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useLogout } from "@/lib/api/hooks/useAuth";
+import { clearPreviousSessionCache, useLogout } from "@/lib/api/hooks/useAuth";
 import { authApi } from "@/lib/api/auth";
 
 function readHasToken(): boolean {
@@ -62,7 +62,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("modsecurity_auth");
     // Protected dashboard queries are tenant scoped by the access token. Drop
     // every cached response before another account can sign in on this browser.
-    queryClient.clear();
+    // The session entry stays so this provider still sees the next login.
+    clearPreviousSessionCache(queryClient);
   }, [isError, queryClient]);
 
   const isAuthLoading = !mounted || (!!hasToken && isPending);

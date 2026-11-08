@@ -1,6 +1,11 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  QueryClient,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { isAxiosError } from "axios";
 import {
@@ -19,6 +24,30 @@ function getApiErrorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
+const SESSION_QUERY_KEY = ["auth", "me"] as const;
+
+/**
+ * Drop every cached query and mutation from a previous session, except the
+ * session entry itself.
+ *
+ * AuthProvider's observer stays attached to the ["auth", "me"] cache entry
+ * and only re-attaches when AuthProvider re-renders. `queryClient.clear()`
+ * deletes that entry, so a user written afterwards with setQueryData lands in
+ * a new entry the provider never sees: login reports success but the app
+ * still treats the visitor as signed out. Keeping the entry and overwriting
+ * it is just as safe, because the new user replaces the old one immediately.
+ */
+export function clearPreviousSessionCache(queryClient: QueryClient): void {
+  queryClient.removeQueries({
+    predicate: (query) =>
+      !(
+        query.queryKey[0] === SESSION_QUERY_KEY[0] &&
+        query.queryKey[1] === SESSION_QUERY_KEY[1]
+      ),
+  });
+  queryClient.getMutationCache().clear();
+}
+
 // Login mutation
 export function useLogin() {
   const queryClient = useQueryClient();
@@ -29,7 +58,7 @@ export function useLogin() {
     onSuccess: (data) => {
       // A shared browser may previously have held another tenant's protected
       // queries. Clear them before installing the new session.
-      queryClient.clear();
+      clearPreviousSessionCache(queryClient);
 
       // Store auth data in localStorage
       const authData = {
@@ -128,7 +157,7 @@ export function useAcceptInvitation() {
       toast.success(data.message || "Invitation accepted successfully!");
 
       if (data.session) {
-        queryClient.clear();
+        clearPreviousSessionCache(queryClient);
         const authData = {
           email: data.user?.email,
           access_token: data.session.access_token,
